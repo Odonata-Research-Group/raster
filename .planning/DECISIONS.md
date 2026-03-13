@@ -1,4 +1,13 @@
-# Raster — DECISIONS.md
+# Floyd Steinberg — DECISIONS.md
+
+## Naming & Brand (V2.3, shipped)
+- Renamed from Raster to Floyd Steinberg
+- Named after Robert W. Floyd and Louis Steinberg, authors of the 1976 error diffusion algorithm
+- Rationale: the algorithm runs inside the tool, the name has lore, it's unexpected and memorable
+- Instagram handle: @floydsteinberg
+- Primary domain: floydsteinberg.art — .art chosen over .app/.io as more appropriate for a creative tool
+- Redirect domain: floydsteinberg.app — purchased to protect the name
+- Both domains purchased via Porkbun, DNS pointed to Vercel
 
 ## Architecture
 - Single index.html shell — UI, canvas, controls
@@ -22,6 +31,14 @@
 - All new patterns share existing controls: Scale, Threshold, Contrast, Invert — no new UI per pattern
 - Patterns drop into existing select dropdown without touching core
 
+## New sliders (V2.3, shipped)
+- Brightness (-100 to +100, default 0) — applied as pixel-level offset before dithering
+- Blur (0–10px, default 0) — CSS filter blur applied to offscreen canvas before dithering; softens pattern edges, creates atmospheric output
+- Pixelate (1–20, default 1) — downsamples to block grid before dithering; produces chunky mosaic + dither layered look
+- Scatter (0–5, default 0) — jitters the sample position in ordered dither patterns; breaks rigid Bayer grid, more organic feel
+- Pre-processing order: pixelate → blur → brightness → dither
+- Blur and pixelate are mutually exclusive in the pipeline — pixelate takes precedence when > 1
+
 ## Colour output — Ink / Paper (V2.2, shipped)
 - Two hex inputs: Ink (foreground, default #ffffff) and Paper (background, default #000000)
 - Labelled "Ink / Paper" — fits the darkroom/print aesthetic
@@ -32,55 +49,4 @@
 - Mode selector (Mono / Tonal / Palette / RGB / Original) — still V3, not this session
 
 ## Light / Dark mode (V2.2, shipped)
-- CSS variable swap on html element — one toggle, affects everything
-- Dark (default): #000000 bg, #ffffff text
-- Light: #ffffff bg, #000000 text, adjusted mid (#888888) and border (#cccccc)
-- Toggle lives in header, replaces "Bitmap — V1" label
-- Label updates contextually: shows "Light" in dark mode, "Dark" in light mode
-
-## Typography system (V2.2, shipped)
-- IBM Plex Mono throughout — all three loaded weights used
-- Section headers (group-label): 500 weight, white (var(--fg)), 10px — primary visual anchor
-- Control labels (param-name, toggle-label, colour-label): 300 weight, mid gray — recede correctly
-- Param values: 400 weight, white, 11px — reads as data not decoration
-- Wordmark: 500 weight, 13px, 0.2em tracking
-
-## About modal (V2.2, shipped)
-- Modal overlay — stays in tool, no navigation away
-- Triggered from About link in sidebar footer
-- Closes via ✕ button, clicking overlay, or Escape key
-- Content: tone reference is honest, anti-friction (Alim's site aesthetic)
-- Credit: "Made by Nick — Odonata Research Group"
-- Instagram link placeholder — href="#" until handle confirmed
-
-## Sidebar footer (V2.2, shipped)
-- Three links: About · Follow · GitHub
-- Pushed to bottom of sidebar via margin-top: auto
-- Styling: 300 weight, mid gray, hover reveals arrow + brightens to white
-- Arrow treatment: all three use → (straight arrow) — consistent regardless of destination
-- Rationale: diagonal ↗ signals "exits the experience" which was inconsistent with About; uniformity wins
-
-## Export buttons (V2.2, shipped)
-- Export buttons use border-color: var(--mid) default — visually distinct from Input buttons
-- Same .btn base class, additional .export-btn class for the treatment
-
-## Canvas zoom (backlog)
-- Pixel-perfect inspection of dithered output
-- Useful for high-resolution export verification
-- Fits "built, not styled" aesthetic
-
-## Analytics
-- Umami (open source, privacy-respecting, self-hostable on Vercel)
-- Track: page views, PNG downloads, GIF downloads, TXT downloads
-- Goal: measure Instagram → raster → download funnel
-
-## Export formats
-- V1 shipped: PNG, JPG, TXT (ASCII)
-- V2 planned: GIF (animated, camera frames)
-- V3 planned: MP4 (MediaRecorder API), SVG
-
-## Competitive reference
-- Reviewed comparable browser-based dither tool (March 2026)
-- Decision: don't chase feature parity — their UX is a settings panel, ours is a tool
-- Steal: more dither algorithms, colour modes, canvas zoom
-- Ignore: post-processing (CRT, Phosphor, Bloom), chromatic aberration sliders — wrong aesthetic for ORG
+- CSS variable swap on html e

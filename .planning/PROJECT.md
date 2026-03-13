@@ -1,17 +1,18 @@
-# Raster — PROJECT.md
+# Floyd Steinberg — PROJECT.md
 
-## What is Raster?
+## What is Floyd Steinberg?
 
-Raster is a browser-based image effect tool. Drop in a photo, apply a visual effect, download the result. No login, no signup, no friction. Just open and experiment.
+Floyd Steinberg is a browser-based image dithering tool. Drop in a photo, apply a bitmap effect, download the result. No login, no signup, no friction. Just open and experiment.
 
-**Live:** https://raster-khaki.vercel.app
-**Status:** V2.2 shipped — bitmap dither, camera input, colour output, PNG/JPG/TXT export
+**Live:** https://floydsteinberg.art
+**Instagram:** @floydsteinberg
+**Status:** V2.3 shipped — bitmap dither, camera input, colour output, GIF/PNG/JPG export, brightness/blur/pixelate/scatter controls
 
 ## Why does it exist?
 
 Three reasons:
 1. A learning lab for creative coding — effects built in Canvas API / vanilla JS
-2. A content engine for ORG — images made with Raster get posted to Instagram
+2. A content engine for ORG — images made with Floyd Steinberg get posted to Instagram
 3. An experiment in virality — can a free tool spread on its own?
 
 ## Who is it for?
@@ -37,10 +38,15 @@ Immediate. Tactile. Like a darkroom tool that runs in the browser. The aesthetic
 - The output should feel built, not styled
 - Reference: Joy Division, Swiss modernism, ASCII art
 
+## The name
+
+Named after Robert W. Floyd and Louis Steinberg, who published "An Adaptive Algorithm for Spatial Greyscale" in 1976. Their error diffusion algorithm runs inside this tool. Nearly fifty years later it still runs inside almost every printer, image editor, and display pipeline on earth.
+
 ## Stack
 
 - Single `index.html` shell + `effects/` folder
 - Vanilla JS + Canvas API
 - No frameworks, no build step
 - Deployed on Vercel, auto-deploys from GitHub main
+- Primary domain: floydsteinberg.art
 - Repo: https://github.com/Odonata-Research-Group/raster
