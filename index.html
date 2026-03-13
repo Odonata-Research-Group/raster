@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RASTER</title>
+  <meta name="description" content="Browser-based bitmap dithering tool. Drop an image, apply effects, download." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #000000;
+      --fg: #ffffff;
+      --mid: #555555;
+      --dim: #222222;
+      --border: #333333;
+      --font: 'IBM Plex Mono', monospace;
+      --control-h: 36px;
+    }
+
+    html, body {
+      background: var(--bg);
+      color: var(--fg);
+      font-family: var(--font);
+      font-size: 11px;
+      letter-spacing: 0.05em;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    /* ── LAYOUT ── */
+    .app {
+      display: grid;
+      grid-template-rows: 40px 1fr 48px;
+      height: 100vh;
+      width: 100vw;
+    }
+
+    /* ── HEADER ── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .wordmark {
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+    }
+
+    .header-meta {
+      color: var(--mid);
+      font-size: 10px;
+      letter-spacing: 0.1em;
+    }
+
+    /* ── MAIN ── */
+    main {
+      display: grid;
+      grid-template-columns: 1fr 200px;
+      overflow: hidden;
+    }
+
+    /* ── CANVAS AREA ── */
+    .canvas-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg);
+      overflow: hidden;
+      border-right: 1px solid var(--border);
+    }
+
+    #canvas {
+      max-width: 100%;
+      max-height: 100%;
+      display: block;
+      image-rendering: pixelated;
+    }
+
+    .drop-zone {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .drop-zone.hidden { display: none; }
+
+    .drop-zone:hover { background: rgba(255,255,255,0.02); }
+
+    .drop-zone.dragging { background: rgba(255,255,255,0.04); }
+
+    .drop-icon {
+      width: 40px;
+      height: 40px;
+      border: 1px solid var(--mid);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .drop-icon svg { stroke: var(--mid); }
+
+    .drop-label {
+      color: var(--mid);
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      text-align: center;
+      line-height: 1.8;
+    }
+
+    .drop-sub {
+      font-size: 9px;
+      color: var(--border);
+      letter-spacing: 0.1em;
+      text-align: center;
+    }
+
+    #fileInput { display: none; }
+
+    /* ── CAMERA OVERLAY ── */
+    #videoEl {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: none;
+      opacity: 0;
+    }
+
+    /* ── SIDEBAR ── */
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      padding: 16px 12px;
+      gap: 20px;
+    }
+
+    .sidebar::-webkit-scrollbar { width: 3px; }
+    .sidebar::-webkit-scrollbar-track { background: transparent; }
+    .sidebar::-webkit-scrollbar-thumb { background: var(--border); }
+
+    /* ── CONTROL GROUPS ── */
+    .group-label {
+      font-size: 9px;
+      color: var(--mid);
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* ── BUTTONS ── */
+    .btn {
+      width: 100%;
+      height: var(--control-h);
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--fg);
+      font-family: var(--font);
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: border-color 0.1s, background 0.1s;
+      margin-bottom: 6px;
+    }
+
+    .btn:hover {
+      border-color: var(--fg);
+      background: rgba(255,255,255,0.04);
+    }
+
+    .btn.active {
+      border-color: var(--fg);
+      background: var(--fg);
+      color: var(--bg);
+    }
+
+    .btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    .btn.danger { border-color: #444; }
+    .btn.danger:hover { border-color: #ff4444; color: #ff4444; }
+
+    /* ── SLIDERS ── */
+    .param {
+      margin-bottom: 14px;
+    }
+
+    .param-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 6px;
+    }
+
+    .param-name {
+      font-size: 9px;
+      color: var(--mid);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+    }
+
+    .param-val {
+      font-size: 10px;
+      color: var(--fg);
+      min-width: 24px;
+      text-align: right;
+    }
+
+    input[type=range] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 1px;
+      background: var(--border);
+      outline: none;
+      cursor: pointer;
+    }
+
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 10px;
+      height: 10px;
+      background: var(--fg);
+      cursor: pointer;
+    }
+
+    input[type=range]:hover { background: var(--mid); }
+
+    /* ── SELECT ── */
+    select {
+      width: 100%;
+      height: var(--control-h);
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--fg);
+      font-family: var(--font);
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      padding: 0 10px;
+      cursor: pointer;
+      outline: none;
+      appearance: none;
+      margin-bottom: 6px;
+    }
+
+    select option { background: #111; }
+    select:hover { border-color: var(--mid); }
+
+    /* ── TOGGLE ── */
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .toggle-label {
+      font-size: 9px;
+      color: var(--mid);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+    }
+
+    .toggle {
+      width: 28px;
+      height: 14px;
+      background: var(--dim);
+      border: 1px solid var(--border);
+      cursor: pointer;
+      position: relative;
+      transition: background 0.15s;
+      flex-shrink: 0;
+    }
+
+    .toggle.on { background: var(--fg); }
+
+    .toggle::after {
+      content: '';
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 8px;
+      height: 8px;
+      background: var(--mid);
+      transition: left 0.15s, background 0.15s;
+    }
+
+    .toggle.on::after {
+      left: 16px;
+      background: var(--bg);
+    }
+
+    /* ── STATUS BAR ── */
+    .statusbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      border-top: 1px solid var(--border);
+      color: var(--mid);
+      font-size: 9px;
+      letter-spacing: 0.1em;
+    }
+
+    .status-left { display: flex; gap: 20px; }
+    .status-right { display: flex; gap: 20px; }
+
+    /* ── CAMERA BADGE ── */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 9px;
+      color: var(--mid);
+      letter-spacing: 0.1em;
+    }
+
+    .badge-dot {
+      width: 6px;
+      height: 6px;
+      background: var(--mid);
+      border-radius: 50%;
+    }
+
+    .badge-dot.live {
+      background: #00ff88;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    /* ── LOADING ── */
+    .processing {
+      position: absolute;
+      bottom: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 9px;
+      color: var(--mid);
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      opacity: 0;
+      transition: opacity 0.2s;
+      pointer-events: none;
+    }
+
+    .processing.show { opacity: 1; }
+
+  </style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- HEADER -->
+  <header>
+    <div class="wordmark">Raster</div>
+    <div class="header-meta">Bitmap — V1</div>
+  </header>
+
+  <!-- MAIN -->
+  <main>
+
+    <!-- CANVAS -->
+    <div class="canvas-wrap" id="canvasWrap">
+      <canvas id="canvas"></canvas>
+      <video id="videoEl" autoplay muted playsinline></video>
+
+      <div class="drop-zone" id="dropZone">
+        <div class="drop-icon">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke-width="1">
+            <rect x="2" y="2" width="12" height="12"/>
+            <line x1="8" y1="5" x2="8" y2="11"/>
+            <line x1="5" y1="8" x2="11" y2="8"/>
+          </svg>
+        </div>
+        <div class="drop-label">DROP IMAGE<br>OR CLICK TO UPLOAD</div>
+        <div class="drop-sub">JPG · PNG · GIF · WEBP</div>
+      </div>
+
+      <div class="processing" id="processing">Processing…</div>
+    </div>
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+
+      <!-- INPUT -->
+      <div class="group">
+        <div class="group-label">Input</div>
+        <button class="btn" id="btnUpload">↑ Upload Image</button>
+        <button class="btn" id="btnCamera">◉ Camera</button>
+        <button class="btn danger" id="btnClear" disabled>✕ Clear</button>
+        <input type="file" id="fileInput" accept="image/*" />
+      </div>
+
+      <!-- EFFECT -->
+      <div class="group">
+        <div class="group-label">Effect — Bitmap</div>
+
+        <div class="param">
+          <div class="param-header">
+            <span class="param-name">Pattern</span>
+          </div>
+          <select id="selPattern">
+            <option value="bayer2">Bayer 2×2</option>
+            <option value="bayer4" selected>Bayer 4×4</option>
+            <option value="bayer8">Bayer 8×8</option>
+            <option value="halftone">Halftone</option>
+            <option value="noise">Noise</option>
+          </select>
+        </div>
+
+        <div class="param">
+          <div class="param-header">
+            <span class="param-name">Scale</span>
+            <span class="param-val" id="valScale">2</span>
+          </div>
+          <input type="range" id="sldScale" min="1" max="8" value="2" step="1" />
+        </div>
+
+        <div class="param">
+          <div class="param-header">
+            <span class="param-name">Threshold</span>
+            <span class="param-val" id="valThreshold">0</span>
+          </div>
+          <input type="range" id="sldThreshold" min="-128" max="128" value="0" step="1" />
+        </div>
+
+        <div class="param">
+          <div class="param-header">
+            <span class="param-name">Contrast</span>
+            <span class="param-val" id="valContrast">1.0</span>
+          </div>
+          <input type="range" id="sldContrast" min="0.5" max="3" value="1" step="0.1" />
+        </div>
+
+        <div class="toggle-row">
+          <span class="toggle-label">Invert</span>
+          <div class="toggle" id="togInvert"></div>
+        </div>
+
+      </div>
+
+      <!-- OUTPUT -->
+      <div class="group">
+        <div class="group-label">Export</div>
+        <button class="btn" id="btnPNG" disabled>↓ PNG</button>
+        <button class="btn" id="btnJPG" disabled>↓ JPG</button>
+        <button class="btn" id="btnTXT" disabled>↓ TXT (ASCII)</button>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- STATUS BAR -->
+  <div class="statusbar">
+    <div class="status-left">
+      <span id="statusDims">No image</span>
+      <span id="statusEffect">Bayer 4×4 · Scale 2</span>
+    </div>
+    <div class="status-right">
+      <span class="badge">
+        <span class="badge-dot" id="liveDot"></span>
+        <span id="liveLabel">—</span>
+      </span>
+      <span>raster-khaki.vercel.app</span>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ────────────────────────────────────────────────
+   RASTER — V1 — Bitmap Dither Engine
+   Canvas API · Vanilla JS · No dependencies
+──────────────────────────────────────────────── */
+
+// ── State
+const state = {
+  source: null,     // ImageBitmap or null
+  mode: 'idle',     // idle | image | camera
+  invert: false,
+  scale: 2,
+  threshold: 0,
+  contrast: 1.0,
+  pattern: 'bayer4',
+  cameraStream: null,
+  rafId: null,
+  frameW: 0,
+  frameH: 0,
+};
+
+// ── Elements
+const canvas    = document.getElementById('canvas');
+const ctx       = canvas.getContext('2d', { willReadFrequently: true });
+const videoEl   = document.getElementById('videoEl');
+const dropZone  = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const processing = document.getElementById('processing');
+
+const btnUpload  = document.getElementById('btnUpload');
+const btnCamera  = document.getElementById('btnCamera');
+const btnClear   = document.getElementById('btnClear');
+const btnPNG     = document.getElementById('btnPNG');
+const btnJPG     = document.getElementById('btnJPG');
+const btnTXT     = document.getElementById('btnTXT');
+
+const selPattern  = document.getElementById('selPattern');
+const sldScale    = document.getElementById('sldScale');
+const sldThreshold = document.getElementById('sldThreshold');
+const sldContrast  = document.getElementById('sldContrast');
+const valScale    = document.getElementById('valScale');
+const valThreshold = document.getElementById('valThreshold');
+const valContrast  = document.getElementById('valContrast');
+const togInvert   = document.getElementById('togInvert');
+
+const statusDims   = document.getElementById('statusDims');
+const statusEffect = document.getElementById('statusEffect');
+const liveDot      = document.getElementById('liveDot');
+const liveLabel    = document.getElementById('liveLabel');
+
+// ── Bayer matrices
+const BAYER = {
+  bayer2: [
+    [ 0, 2 ],
+    [ 3, 1 ]
+  ],
+  bayer4: [
+    [  0,  8,  2, 10 ],
+    [ 12,  4, 14,  6 ],
+    [  3, 11,  1,  9 ],
+    [ 15,  7, 13,  5 ]
+  ],
+  bayer8: (() => {
+    const b4 = [
+      [  0,  8,  2, 10 ],
+      [ 12,  4, 14,  6 ],
+      [  3, 11,  1,  9 ],
+      [ 15,  7, 13,  5 ]
+    ];
+    const m = [];
+    for (let y = 0; y < 8; y++) {
+      m[y] = [];
+      for (let x = 0; x < 8; x++) {
+        const bx = x % 4, by = y % 4;
+        const qx = Math.floor(x / 4), qy = Math.floor(y / 4);
+        m[y][x] = b4[by][bx] * 4 + b4[qy][qx];
+      }
+    }
+    return m;
+  })(),
+};
+
+// ── Dither engine
+function dither(imageData, w, h) {
+  const { pattern, scale, threshold, contrast, invert } = state;
+  const src = imageData.data;
+
+  // output canvas (scaled down)
+  const ow = Math.ceil(w / scale);
+  const oh = Math.ceil(h / scale);
+  const out = ctx.createImageData(ow, oh);
+  const dst = out.data;
+
+  const mat = BAYER[pattern] || BAYER.bayer4;
+  const mSize = mat.length;
+  const mMax = mSize * mSize;
+
+  for (let py = 0; py < oh; py++) {
+    for (let px = 0; px < ow; px++) {
+      // Sample source pixel (centre of scaled cell)
+      const sx = Math.min(Math.round(px * scale + scale / 2), w - 1);
+      const sy = Math.min(Math.round(py * scale + scale / 2), h - 1);
+      const si = (sy * w + sx) * 4;
+
+      // Grayscale
+      let lum = 0.299 * src[si] + 0.587 * src[si+1] + 0.114 * src[si+2];
+
+      // Contrast
+      lum = ((lum - 128) * contrast + 128);
+      lum = Math.max(0, Math.min(255, lum));
+
+      // Threshold offset
+      lum = Math.max(0, Math.min(255, lum + threshold));
+
+      // Dither
+      let bit;
+      if (pattern === 'noise') {
+        bit = lum > (Math.random() * 255) ? 255 : 0;
+      } else if (pattern === 'halftone') {
+        // simple circular halftone
+        const cx = (px % mSize) - mSize / 2 + 0.5;
+        const cy = (py % mSize) - mSize / 2 + 0.5;
+        const dist = Math.sqrt(cx*cx + cy*cy);
+        const maxDist = mSize / 2;
+        const dotThreshold = (1 - lum / 255) * maxDist;
+        bit = dist < dotThreshold ? 0 : 255;
+      } else {
+        const mx = px % mSize;
+        const my = py % mSize;
+        const bayerVal = (mat[my][mx] / mMax) * 255;
+        bit = lum > bayerVal ? 255 : 0;
+      }
+
+      if (invert) bit = 255 - bit;
+
+      const di = (py * ow + px) * 4;
+      dst[di]   = bit;
+      dst[di+1] = bit;
+      dst[di+2] = bit;
+      dst[di+3] = 255;
+    }
+  }
+
+  return { imageData: out, ow, oh };
+}
+
+// ── Render pipeline
+const offscreen = document.createElement('canvas');
+const offCtx    = offscreen.getContext('2d', { willReadFrequently: true });
+
+function render(sourceBitmap) {
+  const wrap = document.getElementById('canvasWrap');
+  const maxW = wrap.clientWidth;
+  const maxH = wrap.clientHeight;
+
+  let srcW = sourceBitmap.width;
+  let srcH = sourceBitmap.height;
+
+  // Fit to container
+  const ratio = Math.min(maxW / srcW, maxH / srcH);
+  const fitW  = Math.floor(srcW * ratio);
+  const fitH  = Math.floor(srcH * ratio);
+
+  offscreen.width  = fitW;
+  offscreen.height = fitH;
+  offCtx.drawImage(sourceBitmap, 0, 0, fitW, fitH);
+
+  const imgData = offCtx.getImageData(0, 0, fitW, fitH);
+  const { imageData: dithered, ow, oh } = dither(imgData, fitW, fitH);
+
+  // Draw output at fitted size (scaled up from dithered)
+  canvas.width  = fitW;
+  canvas.height = fitH;
+  ctx.imageSmoothingEnabled = false;
+
+  // Temp canvas for dithered output
+  const tmp = document.createElement('canvas');
+  tmp.width  = ow;
+  tmp.height = oh;
+  const tCtx = tmp.getContext('2d');
+  tCtx.putImageData(dithered, 0, 0);
+
+  ctx.drawImage(tmp, 0, 0, fitW, fitH);
+
+  state.frameW = fitW;
+  state.frameH = fitH;
+}
+
+// ── Render loop (camera)
+function loop() {
+  if (state.mode !== 'camera' || !state.cameraStream) return;
+  if (videoEl.readyState >= 2) {
+    render(videoEl);
+  }
+  state.rafId = requestAnimationFrame(loop);
+}
+
+// ── Re-render on param change
+function rerender() {
+  if (state.mode === 'image' && state.source) render(state.source);
+  updateStatus();
+}
+
+// ── Load image from file
+async function loadImageFile(file) {
+  if (!file || !file.type.startsWith('image/')) return;
+  showProcessing();
+  const bitmap = await createImageBitmap(file);
+  stopCamera();
+  state.source = bitmap;
+  state.mode   = 'image';
+  dropZone.classList.add('hidden');
+  render(bitmap);
+  setHasImage(true);
+  updateStatus();
+  hideProcessing();
+}
+
+// ── Camera
+async function startCamera() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
+      audio: false
+    });
+    state.cameraStream = stream;
+    state.mode         = 'camera';
+    videoEl.srcObject  = stream;
+    videoEl.style.display = 'none'; // video hidden; canvas shows effect
+    dropZone.classList.add('hidden');
+    setHasImage(true);
+    liveDot.classList.add('live');
+    liveLabel.textContent = 'LIVE';
+    btnCamera.classList.add('active');
+    btnCamera.textContent = '◉ Stop Camera';
+    state.rafId = requestAnimationFrame(loop);
+  } catch (e) {
+    alert('Camera access denied or not available.');
+  }
+}
+
+function stopCamera() {
+  if (state.cameraStream) {
+    state.cameraStream.getTracks().forEach(t => t.stop());
+    state.cameraStream = null;
+  }
+  if (state.rafId) { cancelAnimationFrame(state.rafId); state.rafId = null; }
+  videoEl.srcObject = null;
+  liveDot.classList.remove('live');
+  liveLabel.textContent = '—';
+  btnCamera.classList.remove('active');
+  btnCamera.textContent = '◉ Camera';
+}
+
+function clearAll() {
+  stopCamera();
+  state.source = null;
+  state.mode   = 'idle';
+  canvas.width  = 0;
+  canvas.height = 0;
+  dropZone.classList.remove('hidden');
+  setHasImage(false);
+  updateStatus();
+}
+
+// ── UI state
+function setHasImage(has) {
+  btnClear.disabled = !has;
+  btnPNG.disabled   = !has;
+  btnJPG.disabled   = !has;
+  btnTXT.disabled   = !has;
+}
+
+function showProcessing() { processing.classList.add('show'); }
+function hideProcessing()  { processing.classList.remove('show'); }
+
+function updateStatus() {
+  if (state.mode === 'idle') {
+    statusDims.textContent = 'No image';
+  } else {
+    statusDims.textContent = `${state.frameW} × ${state.frameH}`;
+  }
+  const scaledW = Math.ceil(state.frameW / state.scale);
+  const scaledH = Math.ceil(state.frameH / state.scale);
+  statusEffect.textContent = `${selPattern.options[selPattern.selectedIndex].text} · Scale ${state.scale} · ${scaledW}×${scaledH}`;
+}
+
+// ── ASCII export
+function toASCII() {
+  const chars = ' .:-=+*#%@';
+  const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const pw = Math.ceil(canvas.width / state.scale);
+  const ph = Math.ceil(canvas.height / state.scale);
+  let txt = `RASTER — ASCII EXPORT\n${new Date().toISOString()}\n${pw} × ${ph} chars\n\n`;
+  for (let y = 0; y < ph; y++) {
+    let row = '';
+    for (let x = 0; x < pw; x++) {
+      const sx = Math.floor(x * state.scale);
+      const sy = Math.floor(y * state.scale);
+      const i  = (sy * canvas.width + sx) * 4;
+      const lum = imgData.data[i];
+      const ci  = Math.floor((lum / 255) * (chars.length - 1));
+      row += chars[ci];
+    }
+    txt += row + '\n';
+  }
+  return txt;
+}
+
+// ── Download helpers
+function downloadCanvas(type, quality) {
+  const mime = type === 'jpg' ? 'image/jpeg' : 'image/png';
+  const url  = canvas.toDataURL(mime, quality || 1.0);
+  const a    = document.createElement('a');
+  a.download = `raster-${Date.now()}.${type}`;
+  a.href     = url;
+  a.click();
+}
+
+function downloadTXT() {
+  const txt  = toASCII();
+  const blob = new Blob([txt], { type: 'text/plain' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.download = `raster-${Date.now()}.txt`;
+  a.href     = url;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ── Events: controls
+sldScale.addEventListener('input', () => {
+  state.scale = +sldScale.value;
+  valScale.textContent = state.scale;
+  rerender();
+});
+
+sldThreshold.addEventListener('input', () => {
+  state.threshold = +sldThreshold.value;
+  valThreshold.textContent = state.threshold;
+  rerender();
+});
+
+sldContrast.addEventListener('input', () => {
+  state.contrast = +sldContrast.value;
+  valContrast.textContent = state.contrast.toFixed(1);
+  rerender();
+});
+
+selPattern.addEventListener('change', () => {
+  state.pattern = selPattern.value;
+  rerender();
+});
+
+togInvert.addEventListener('click', () => {
+  state.invert = !state.invert;
+  togInvert.classList.toggle('on', state.invert);
+  rerender();
+});
+
+// ── Events: input buttons
+btnUpload.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', (e) => { if (e.target.files[0]) loadImageFile(e.target.files[0]); });
+
+btnCamera.addEventListener('click', () => {
+  if (state.mode === 'camera') { stopCamera(); if (!state.source) clearAll(); }
+  else startCamera();
+});
+
+btnClear.addEventListener('click', clearAll);
+
+// ── Events: export
+btnPNG.addEventListener('click', () => downloadCanvas('png'));
+btnJPG.addEventListener('click', () => downloadCanvas('jpg', 0.92));
+btnTXT.addEventListener('click', downloadTXT);
+
+// ── Events: drag & drop
+const wrap = document.getElementById('canvasWrap');
+
+wrap.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragging'); });
+wrap.addEventListener('dragleave', () => { dropZone.classList.remove('dragging'); });
+wrap.addEventListener('drop', (e) => {
+  e.preventDefault();
+  dropZone.classList.remove('dragging');
+  const file = e.dataTransfer.files[0];
+  if (file) loadImageFile(file);
+});
+
+dropZone.addEventListener('click', () => fileInput.click());
+
+// ── Events: paste
+document.addEventListener('paste', (e) => {
+  const items = e.clipboardData?.items;
+  if (!items) return;
+  for (const item of items) {
+    if (item.type.startsWith('image/')) {
+      loadImageFile(item.getAsFile());
+      break;
+    }
+  }
+});
+
+// ── Events: resize (re-render on window resize)
+window.addEventListener('resize', () => {
+  if (state.mode === 'image' && state.source) render(state.source);
+});
+
+// ── Init
+updateStatus();
+</script>
+</body>
+</html>
