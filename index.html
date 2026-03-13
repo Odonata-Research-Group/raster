@@ -728,6 +728,7 @@ async function startCamera() {
     state.cameraStream = stream;
     state.mode         = 'camera';
     videoEl.srcObject  = stream;
+    await videoEl.play();
     videoEl.style.display = 'none'; // video hidden; canvas shows effect
     dropZone.classList.add('hidden');
     setHasImage(true);
