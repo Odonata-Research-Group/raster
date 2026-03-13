@@ -13,8 +13,8 @@
 ---
 
 ## Milestone 2 — Deepen the dither
-- [ ] Floyd-Steinberg error diffusion
-- [ ] Atkinson dithering
+- [x] Floyd-Steinberg error diffusion
+- [x] Atkinson dithering
 - [ ] Blue noise dithering
 - [ ] Line screen / horizontal scan
 - [ ] Vertical bar dither
