@@ -1251,13 +1251,14 @@ function hideProcessing()  { processing.classList.remove('show'); }
 
 function updateStatus() {
   if (state.mode === 'idle') {
-    statusDims.textContent = 'No image';
+    statusDims.textContent = 'Error diffusion since 1976';
+    statusEffect.textContent = '';
   } else {
     statusDims.textContent = `${state.frameW} × ${state.frameH}`;
+    const scaledW = Math.ceil(state.frameW / state.scale);
+    const scaledH = Math.ceil(state.frameH / state.scale);
+    statusEffect.textContent = `${selPattern.options[selPattern.selectedIndex].text} · Scale ${state.scale} · ${scaledW}×${scaledH}`;
   }
-  const scaledW = Math.ceil(state.frameW / state.scale);
-  const scaledH = Math.ceil(state.frameH / state.scale);
-  statusEffect.textContent = `${selPattern.options[selPattern.selectedIndex].text} · Scale ${state.scale} · ${scaledW}×${scaledH}`;
 }
 
 // ── GIF export
