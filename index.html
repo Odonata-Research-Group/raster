@@ -439,6 +439,7 @@
             <option value="halftone">Halftone</option>
             <option value="noise">Noise</option>
             <option value="floyd">Floyd-Steinberg</option>
+            <option value="atkinson">Atkinson</option>
           </select>
         </div>
 
@@ -597,8 +598,6 @@ function dither(imageData, w, h) {
   // ── Floyd-Steinberg: two-pass, self-contained
   if (pattern === 'floyd') {
 
-    // Pass 1: build grayscale buffer at output resolution
-    // (same downsample approach as Bayer — scale is pre-downsample factor)
     const gray = new Float32Array(ow * oh);
     for (let py = 0; py < oh; py++) {
       for (let px = 0; px < ow; px++) {
@@ -612,7 +611,6 @@ function dither(imageData, w, h) {
       }
     }
 
-    // Pass 2: error diffusion (left→right, top→bottom)
     for (let py = 0; py < oh; py++) {
       for (let px = 0; px < ow; px++) {
         const i   = py * ow + px;
@@ -620,21 +618,15 @@ function dither(imageData, w, h) {
         const bit = old > 127 ? 255 : 0;
         const err = old - bit;
         gray[i]   = bit;
-
-        // Distribute error to 4 neighbours — Floyd-Steinberg weights
-        if (px + 1 < ow)
-          gray[i + 1]      += err * 7 / 16;
+        if (px + 1 < ow)           gray[i + 1]      += err * 7 / 16;
         if (py + 1 < oh) {
-          if (px - 1 >= 0)
-            gray[i + ow - 1] += err * 3 / 16;
-          gray[i + ow]       += err * 5 / 16;
-          if (px + 1 < ow)
-            gray[i + ow + 1] += err * 1 / 16;
+          if (px - 1 >= 0)         gray[i + ow - 1] += err * 3 / 16;
+                                   gray[i + ow]     += err * 5 / 16;
+          if (px + 1 < ow)         gray[i + ow + 1] += err * 1 / 16;
         }
       }
     }
 
-    // Write to output imageData
     for (let i = 0; i < ow * oh; i++) {
       let bit = gray[i] > 127 ? 255 : 0;
       if (invert) bit = 255 - bit;
@@ -642,7 +634,50 @@ function dither(imageData, w, h) {
       dst[di] = dst[di+1] = dst[di+2] = bit;
       dst[di+3] = 255;
     }
+    return { imageData: out, ow, oh };
+  }
 
+  // ── Atkinson: 6 neighbours, 1/8 each (3/4 total propagation)
+  if (pattern === 'atkinson') {
+
+    const gray = new Float32Array(ow * oh);
+    for (let py = 0; py < oh; py++) {
+      for (let px = 0; px < ow; px++) {
+        const sx = Math.min(Math.round(px * scale + scale / 2), w - 1);
+        const sy = Math.min(Math.round(py * scale + scale / 2), h - 1);
+        const si = (sy * w + sx) * 4;
+        let lum = 0.299 * src[si] + 0.587 * src[si+1] + 0.114 * src[si+2];
+        lum = (lum - 128) * contrast + 128;
+        lum = Math.max(0, Math.min(255, lum + threshold));
+        gray[py * ow + px] = lum;
+      }
+    }
+
+    for (let py = 0; py < oh; py++) {
+      for (let px = 0; px < ow; px++) {
+        const i  = py * ow + px;
+        const old = gray[i];
+        const bit = old > 127 ? 255 : 0;
+        const e8  = (old - bit) / 8;
+        gray[i]   = bit;
+        if (px + 1 < ow)           gray[i + 1]      += e8;
+        if (px + 2 < ow)           gray[i + 2]      += e8;
+        if (py + 1 < oh) {
+          if (px - 1 >= 0)         gray[i + ow - 1] += e8;
+                                   gray[i + ow]     += e8;
+          if (px + 1 < ow)         gray[i + ow + 1] += e8;
+        }
+        if (py + 2 < oh)           gray[i + ow * 2] += e8;
+      }
+    }
+
+    for (let i = 0; i < ow * oh; i++) {
+      let bit = gray[i] > 127 ? 255 : 0;
+      if (invert) bit = 255 - bit;
+      const di = i * 4;
+      dst[di] = dst[di+1] = dst[di+2] = bit;
+      dst[di+3] = 255;
+    }
     return { imageData: out, ow, oh };
   }
 
