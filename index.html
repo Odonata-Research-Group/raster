@@ -8,6 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js"></script>
 
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -690,6 +691,38 @@
           <input type="range" id="sldContrast" min="0.5" max="3" value="1" step="0.1" />
         </div>
 
+        <div class="param">
+          <div class="param-header">
+            <span class="param-name">Brightness</span>
+            <span class="param-val" id="valBrightness">0</span>
+          </div>
+          <input type="range" id="sldBrightness" min="-100" max="100" value="0" step="1" />
+        </div>
+
+        <div class="param">
+          <div class="param-header">
+            <span class="param-name">Blur</span>
+            <span class="param-val" id="valBlur">0</span>
+          </div>
+          <input type="range" id="sldBlur" min="0" max="10" value="0" step="0.5" />
+        </div>
+
+        <div class="param">
+          <div class="param-header">
+            <span class="param-name">Pixelate</span>
+            <span class="param-val" id="valPixelate">1</span>
+          </div>
+          <input type="range" id="sldPixelate" min="1" max="20" value="1" step="1" />
+        </div>
+
+        <div class="param">
+          <div class="param-header">
+            <span class="param-name">Scatter</span>
+            <span class="param-val" id="valScatter">0</span>
+          </div>
+          <input type="range" id="sldScatter" min="0" max="5" value="0" step="1" />
+        </div>
+
         <div class="toggle-row">
           <span class="toggle-label">Invert</span>
           <div class="toggle" id="togInvert"></div>
@@ -727,7 +760,7 @@
         <div class="group-label">Export</div>
         <button class="btn export-btn" id="btnPNG" disabled>↓ PNG</button>
         <button class="btn export-btn" id="btnJPG" disabled>↓ JPG</button>
-        <button class="btn export-btn" id="btnTXT" disabled>↓ TXT (ASCII)</button>
+        <button class="btn export-btn" id="btnGIF" disabled>↓ GIF</button>
       </div>
 
       <!-- FOOTER LINKS -->
@@ -788,6 +821,10 @@ const state = {
   scale: 2,
   threshold: 0,
   contrast: 1.0,
+  brightness: 0,
+  blur: 0,
+  pixelate: 1,
+  scatter: 0,
   pattern: 'bayer4',
   inkColor: '#ffffff',
   paperColor: '#000000',
@@ -795,6 +832,8 @@ const state = {
   rafId: null,
   frameW: 0,
   frameH: 0,
+  gifRecording: false,
+  gifFrames: [],
 };
 
 // ── Elements
@@ -810,16 +849,24 @@ const btnCamera  = document.getElementById('btnCamera');
 const btnClear   = document.getElementById('btnClear');
 const btnPNG     = document.getElementById('btnPNG');
 const btnJPG     = document.getElementById('btnJPG');
-const btnTXT     = document.getElementById('btnTXT');
+const btnGIF     = document.getElementById('btnGIF');
 
-const selPattern  = document.getElementById('selPattern');
-const sldScale    = document.getElementById('sldScale');
-const sldThreshold = document.getElementById('sldThreshold');
-const sldContrast  = document.getElementById('sldContrast');
-const valScale    = document.getElementById('valScale');
-const valThreshold = document.getElementById('valThreshold');
-const valContrast  = document.getElementById('valContrast');
-const togInvert   = document.getElementById('togInvert');
+const selPattern    = document.getElementById('selPattern');
+const sldScale      = document.getElementById('sldScale');
+const sldThreshold  = document.getElementById('sldThreshold');
+const sldContrast   = document.getElementById('sldContrast');
+const sldBrightness = document.getElementById('sldBrightness');
+const sldBlur       = document.getElementById('sldBlur');
+const sldPixelate   = document.getElementById('sldPixelate');
+const sldScatter    = document.getElementById('sldScatter');
+const valScale      = document.getElementById('valScale');
+const valThreshold  = document.getElementById('valThreshold');
+const valContrast   = document.getElementById('valContrast');
+const valBrightness = document.getElementById('valBrightness');
+const valBlur       = document.getElementById('valBlur');
+const valPixelate   = document.getElementById('valPixelate');
+const valScatter    = document.getElementById('valScatter');
+const togInvert     = document.getElementById('togInvert');
 const pickerInk   = document.getElementById('pickerInk');
 const pickerPaper = document.getElementById('pickerPaper');
 const swatchInk   = document.getElementById('swatchInk');
@@ -982,9 +1029,12 @@ function dither(imageData, w, h) {
 
   for (let py = 0; py < oh; py++) {
     for (let px = 0; px < ow; px++) {
-      // Sample source pixel (centre of scaled cell)
-      const sx = Math.min(Math.round(px * scale + scale / 2), w - 1);
-      const sy = Math.min(Math.round(py * scale + scale / 2), h - 1);
+      // Sample source pixel (centre of scaled cell) + scatter jitter
+      const jitter = state.scatter;
+      const jx = jitter > 0 ? Math.round((Math.random() - 0.5) * 2 * jitter) : 0;
+      const jy = jitter > 0 ? Math.round((Math.random() - 0.5) * 2 * jitter) : 0;
+      const sx = Math.min(Math.max(0, Math.round(px * scale + scale / 2) + jx), w - 1);
+      const sy = Math.min(Math.max(0, Math.round(py * scale + scale / 2) + jy), h - 1);
       const si = (sy * w + sx) * 4;
 
       // Grayscale
@@ -1049,7 +1099,40 @@ function render(sourceBitmap) {
 
   offscreen.width  = fitW;
   offscreen.height = fitH;
-  offCtx.drawImage(sourceBitmap, 0, 0, fitW, fitH);
+
+  // ── Pre-processing: pixelate
+  if (state.pixelate > 1) {
+    const pW = Math.max(1, Math.ceil(fitW / state.pixelate));
+    const pH = Math.max(1, Math.ceil(fitH / state.pixelate));
+    const pixCanvas = document.createElement('canvas');
+    pixCanvas.width  = pW;
+    pixCanvas.height = pH;
+    const pixCtx = pixCanvas.getContext('2d');
+    pixCtx.imageSmoothingEnabled = false;
+    pixCtx.drawImage(sourceBitmap, 0, 0, pW, pH);
+    offCtx.imageSmoothingEnabled = false;
+    offCtx.filter = 'none';
+    offCtx.drawImage(pixCanvas, 0, 0, fitW, fitH);
+  } else {
+    // ── Pre-processing: blur
+    offCtx.filter = state.blur > 0 ? `blur(${state.blur}px)` : 'none';
+    offCtx.imageSmoothingEnabled = true;
+    offCtx.drawImage(sourceBitmap, 0, 0, fitW, fitH);
+    offCtx.filter = 'none';
+  }
+
+  // ── Pre-processing: brightness
+  if (state.brightness !== 0) {
+    const id = offCtx.getImageData(0, 0, fitW, fitH);
+    const d  = id.data;
+    const b  = state.brightness;
+    for (let i = 0; i < d.length; i += 4) {
+      d[i]   = Math.max(0, Math.min(255, d[i]   + b));
+      d[i+1] = Math.max(0, Math.min(255, d[i+1] + b));
+      d[i+2] = Math.max(0, Math.min(255, d[i+2] + b));
+    }
+    offCtx.putImageData(id, 0, 0);
+  }
 
   const imgData = offCtx.getImageData(0, 0, fitW, fitH);
   const { imageData: dithered, ow, oh } = dither(imgData, fitW, fitH);
@@ -1070,6 +1153,11 @@ function render(sourceBitmap) {
 
   state.frameW = fitW;
   state.frameH = fitH;
+
+  // ── GIF: capture frame if recording
+  if (state.gifRecording) {
+    state.gifFrames.push(ctx.getImageData(0, 0, fitW, fitH));
+  }
 }
 
 // ── Render loop (camera)
@@ -1155,7 +1243,7 @@ function setHasImage(has) {
   btnClear.disabled = !has;
   btnPNG.disabled   = !has;
   btnJPG.disabled   = !has;
-  btnTXT.disabled   = !has;
+  btnGIF.disabled   = !has;
 }
 
 function showProcessing() { processing.classList.add('show'); }
@@ -1172,26 +1260,91 @@ function updateStatus() {
   statusEffect.textContent = `${selPattern.options[selPattern.selectedIndex].text} · Scale ${state.scale} · ${scaledW}×${scaledH}`;
 }
 
-// ── ASCII export
-function toASCII() {
-  const chars = ' .:-=+*#%@';
-  const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  const pw = Math.ceil(canvas.width / state.scale);
-  const ph = Math.ceil(canvas.height / state.scale);
-  let txt = `RASTER — ASCII EXPORT\n${new Date().toISOString()}\n${pw} × ${ph} chars\n\n`;
-  for (let y = 0; y < ph; y++) {
-    let row = '';
-    for (let x = 0; x < pw; x++) {
-      const sx = Math.floor(x * state.scale);
-      const sy = Math.floor(y * state.scale);
-      const i  = (sy * canvas.width + sx) * 4;
-      const lum = imgData.data[i];
-      const ci  = Math.floor((lum / 255) * (chars.length - 1));
-      row += chars[ci];
-    }
-    txt += row + '\n';
+// ── GIF export
+function downloadGIF() {
+  if (state.mode === 'camera') {
+    startGIFCapture();
+  } else {
+    exportGIFStill();
   }
-  return txt;
+}
+
+function exportGIFStill() {
+  btnGIF.textContent = '… Encoding';
+  btnGIF.disabled = true;
+  const gif = new GIF({
+    workers: 2,
+    quality: 10,
+    width: canvas.width,
+    height: canvas.height,
+    workerScript: 'https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js',
+  });
+  gif.addFrame(canvas, { delay: 100, copy: true });
+  gif.on('finished', (blob) => {
+    const url = URL.createObjectURL(blob);
+    const a   = document.createElement('a');
+    a.download = `floydsteinberg-${Date.now()}.gif`;
+    a.href = url;
+    a.click();
+    URL.revokeObjectURL(url);
+    btnGIF.textContent = '↓ GIF';
+    btnGIF.disabled = false;
+  });
+  gif.render();
+}
+
+function startGIFCapture() {
+  if (state.gifRecording) return;
+  state.gifRecording = true;
+  state.gifFrames    = [];
+  btnGIF.textContent = '● Rec 3s';
+  btnGIF.classList.add('active');
+  btnGIF.disabled = true;
+
+  setTimeout(() => {
+    state.gifRecording = false;
+    btnGIF.textContent = '… Encoding';
+
+    const frames = state.gifFrames;
+    if (!frames.length) {
+      btnGIF.textContent = '↓ GIF';
+      btnGIF.classList.remove('active');
+      btnGIF.disabled = false;
+      return;
+    }
+
+    const gif = new GIF({
+      workers: 2,
+      quality: 10,
+      width: frames[0].width,
+      height: frames[0].height,
+      workerScript: 'https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js',
+    });
+
+    const delay = Math.round(3000 / frames.length);
+    frames.forEach(frame => {
+      const tmp = document.createElement('canvas');
+      tmp.width  = frame.width;
+      tmp.height = frame.height;
+      tmp.getContext('2d').putImageData(frame, 0, 0);
+      gif.addFrame(tmp, { delay, copy: true });
+    });
+
+    gif.on('finished', (blob) => {
+      const url = URL.createObjectURL(blob);
+      const a   = document.createElement('a');
+      a.download = `floydsteinberg-${Date.now()}.gif`;
+      a.href = url;
+      a.click();
+      URL.revokeObjectURL(url);
+      btnGIF.textContent = '↓ GIF';
+      btnGIF.classList.remove('active');
+      btnGIF.disabled = false;
+      state.gifFrames = [];
+    });
+
+    gif.render();
+  }, 3000);
 }
 
 // ── Download helpers
@@ -1199,20 +1352,9 @@ function downloadCanvas(type, quality) {
   const mime = type === 'jpg' ? 'image/jpeg' : 'image/png';
   const url  = canvas.toDataURL(mime, quality || 1.0);
   const a    = document.createElement('a');
-  a.download = `raster-${Date.now()}.${type}`;
+  a.download = `floydsteinberg-${Date.now()}.${type}`;
   a.href     = url;
   a.click();
-}
-
-function downloadTXT() {
-  const txt  = toASCII();
-  const blob = new Blob([txt], { type: 'text/plain' });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.download = `raster-${Date.now()}.txt`;
-  a.href     = url;
-  a.click();
-  URL.revokeObjectURL(url);
 }
 
 // ── Events: controls
@@ -1231,6 +1373,30 @@ sldThreshold.addEventListener('input', () => {
 sldContrast.addEventListener('input', () => {
   state.contrast = +sldContrast.value;
   valContrast.textContent = state.contrast.toFixed(1);
+  rerender();
+});
+
+sldBrightness.addEventListener('input', () => {
+  state.brightness = +sldBrightness.value;
+  valBrightness.textContent = state.brightness;
+  rerender();
+});
+
+sldBlur.addEventListener('input', () => {
+  state.blur = +sldBlur.value;
+  valBlur.textContent = state.blur;
+  rerender();
+});
+
+sldPixelate.addEventListener('input', () => {
+  state.pixelate = +sldPixelate.value;
+  valPixelate.textContent = state.pixelate;
+  rerender();
+});
+
+sldScatter.addEventListener('input', () => {
+  state.scatter = +sldScatter.value;
+  valScatter.textContent = state.scatter;
   rerender();
 });
 
@@ -1283,7 +1449,7 @@ btnClear.addEventListener('click', clearAll);
 // ── Events: export
 btnPNG.addEventListener('click', () => downloadCanvas('png'));
 btnJPG.addEventListener('click', () => downloadCanvas('jpg', 0.92));
-btnTXT.addEventListener('click', downloadTXT);
+btnGIF.addEventListener('click', downloadGIF);
 
 // ── Events: drag & drop
 const wrap = document.getElementById('canvasWrap');
