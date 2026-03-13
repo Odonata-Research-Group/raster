@@ -33,8 +33,8 @@
 ## V2 (Current sprint)
 
 ### Dither — new algorithms
-- [ ] Floyd-Steinberg error diffusion
-- [ ] Atkinson dithering
+- [x] Floyd-Steinberg error diffusion
+- [x] Atkinson dithering
 - [ ] Blue noise dithering
 - [ ] Line screen / horizontal scan
 - [ ] Vertical bar dither
