@@ -14,31 +14,55 @@
 - Parameters: Scale, Threshold, Contrast, Invert toggle
 - Scale = pixel block size (pre-downsample factor, then pixelated upscale)
 
-## Effect V2: Dither — new algorithms
-- Floyd-Steinberg error diffusion — first new pattern (this session)
+## Effect V2: Dither — new algorithms (shipped)
+- Floyd-Steinberg error diffusion — first new pattern
 - Rationale: fundamentally different algorithm from Bayer (error propagation vs matrix lookup), produces organic edges, high ORG aesthetic fit
-- Scale on Floyd-Steinberg = pre-downsample factor, consistent with Bayer behaviour
+- Atkinson dithering — 6-neighbour, 3/4 total error propagation, harder edges than Floyd-Steinberg
+- Scale on Floyd-Steinberg and Atkinson = pre-downsample factor, consistent with Bayer behaviour
 - All new patterns share existing controls: Scale, Threshold, Contrast, Invert — no new UI per pattern
 - Patterns drop into existing select dropdown without touching core
 
-## Typography
-- IBM Plex Mono throughout
-- Loaded from Google Fonts
+## Colour output — Ink / Paper (V2.2, shipped)
+- Two hex inputs: Ink (foreground, default #ffffff) and Paper (background, default #000000)
+- Labelled "Ink / Paper" — fits the darkroom/print aesthetic
+- Colour applied at pixel write step in dither() — replaces hardcoded 255/0 values
+- Works across all patterns automatically — no per-pattern logic
+- Invert toggle continues to work — swaps which pixels get Ink vs Paper
+- Defaults match original black/white output exactly — no regression
+- Mode selector (Mono / Tonal / Palette / RGB / Original) — still V3, not this session
 
-## Colour
-- Background: #000000
-- Text / UI: #FFFFFF
-- No accent colours in V1
+## Light / Dark mode (V2.2, shipped)
+- CSS variable swap on html element — one toggle, affects everything
+- Dark (default): #000000 bg, #ffffff text
+- Light: #ffffff bg, #000000 text, adjusted mid (#888888) and border (#cccccc)
+- Toggle lives in header, replaces "Bitmap — V1" label
+- Label updates contextually: shows "Light" in dark mode, "Dark" in light mode
 
-## Light / Dark mode (V3)
-- Full inversion: black UI + white output ↔ white UI + black output
-- CSS variable swap — one toggle, affects everything
-- Not a partial flip — the whole experience inverts
+## Typography system (V2.2, shipped)
+- IBM Plex Mono throughout — all three loaded weights used
+- Section headers (group-label): 500 weight, white (var(--fg)), 10px — primary visual anchor
+- Control labels (param-name, toggle-label, colour-label): 300 weight, mid gray — recede correctly
+- Param values: 400 weight, white, 11px — reads as data not decoration
+- Wordmark: 500 weight, 13px, 0.2em tracking
 
-## Colour output mode (V3)
-- Dither output in colour, not just black/white
-- Needs design thinking before spec — how colour maps to dither pattern is non-trivial
-- Likely implemented as a Mode selector (Mono / Tonal / Original)
+## About modal (V2.2, shipped)
+- Modal overlay — stays in tool, no navigation away
+- Triggered from About link in sidebar footer
+- Closes via ✕ button, clicking overlay, or Escape key
+- Content: tone reference is honest, anti-friction (Alim's site aesthetic)
+- Credit: "Made by Nick — Odonata Research Group"
+- Instagram link placeholder — href="#" until handle confirmed
+
+## Sidebar footer (V2.2, shipped)
+- Three links: About · Follow · GitHub
+- Pushed to bottom of sidebar via margin-top: auto
+- Styling: 300 weight, mid gray, hover reveals arrow + brightens to white
+- Arrow treatment: all three use → (straight arrow) — consistent regardless of destination
+- Rationale: diagonal ↗ signals "exits the experience" which was inconsistent with About; uniformity wins
+
+## Export buttons (V2.2, shipped)
+- Export buttons use border-color: var(--mid) default — visually distinct from Input buttons
+- Same .btn base class, additional .export-btn class for the treatment
 
 ## Canvas zoom (backlog)
 - Pixel-perfect inspection of dithered output

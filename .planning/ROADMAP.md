@@ -12,21 +12,28 @@
 
 ---
 
-## Milestone 2 — Deepen the dither
+## Milestone 2 — Deepen the dither ✓
 - [x] Floyd-Steinberg error diffusion
 - [x] Atkinson dithering
-- [ ] Blue noise dithering
-- [ ] Line screen / horizontal scan
-- [ ] Vertical bar dither
-- [ ] GIF export (animated, from camera frames)
-- [ ] Umami analytics installed
-- [ ] Custom domain
+- [x] Blue noise dithering
+- [x] Line screen / horizontal scan
+- [x] Vertical bar dither
+- [x] GIF export (animated, from camera frames)
+- [x] Umami analytics installed
+- [x] Custom domain
 
 ---
 
-## Milestone 3 — Colour + polish
-- [ ] Light / dark mode — full UI inversion
-- [ ] Colour output mode (Mono / Tonal / Original)
+## Milestone 3 — Colour + polish (in progress)
+- [x] Light / dark mode — full UI inversion
+- [x] Ink / Paper colour controls — two-colour dither output
+- [x] Typography hierarchy — 300 / 400 / 500 weight system
+- [x] About modal + sidebar footer links (About · Follow · GitHub)
+- [ ] About modal — final content pass
+- [ ] Follow link — Instagram handle (pending)
+- [ ] Footer arrow consistency — all three use →
+- [ ] UX analysis — friction points, quick wins, prioritised backlog
+- [ ] Colour output mode selector (Mono / Tonal / Palette / RGB / Original)
 - [ ] Canvas zoom — pixel-perfect inspection
 - [ ] MP4 export (MediaRecorder API)
 - [ ] SVG export

@@ -30,32 +30,63 @@
 
 ---
 
-## V2 (Current sprint)
+## V2 (Shipped)
 
 ### Dither — new algorithms
 - [x] Floyd-Steinberg error diffusion
 - [x] Atkinson dithering
-- [ ] Blue noise dithering
-- [ ] Line screen / horizontal scan
-- [ ] Vertical bar dither
+- [x] Blue noise dithering
+- [x] Line screen / horizontal scan
+- [x] Vertical bar dither
 
 ### Export
-- [ ] GIF export (animated, from camera frames)
+- [x] GIF export (animated, from camera frames)
 
 ### Analytics
-- [ ] Umami installed (page views, PNG / GIF / TXT download events)
-- [ ] Custom domain
+- [x] Umami installed (page views, PNG / GIF / TXT download events)
+- [x] Custom domain
+
+---
+
+## V2.2 (Shipped)
+
+### Colour
+- [x] Ink / Paper colour controls — two hex inputs, live re-render
+- [x] Works across all dither patterns automatically
+- [x] Defaults to #ffffff / #000000 — no regression on existing output
+
+### UI
+- [x] Light / dark mode toggle in header
+- [x] Typography hierarchy — section headers 500 weight, control labels 300 weight
+- [x] About modal — opens from sidebar footer, closes via ✕ / overlay / Escape
+- [x] Sidebar footer — About · Follow · GitHub links
+- [x] Export buttons more prominent (border-color: var(--mid))
+- [x] Effect label simplified (was "Effect — Bitmap")
+
+---
+
+## V2.3 (Current sprint)
+
+### Content
+- [ ] About modal copy — final content pass by Nick
+- [ ] Follow link — update href once Instagram handle confirmed
+
+### UI
+- [ ] Footer link arrow consistency — all three use → (straight arrow)
+
+### Analysis
+- [ ] Structured UX analysis — friction points, missing features, quick wins
+- [ ] Output: prioritised improvement list with effort estimates
 
 ---
 
 ## V3
 
 ### UI
-- [ ] Light / dark mode toggle — full inversion (black UI + white output ↔ white UI + black output)
 - [ ] Canvas zoom — pixel-perfect inspection of dithered output
 
 ### Colour
-- [ ] Colour output mode — Mode selector (Mono / Tonal / Original)
+- [ ] Colour output mode selector (Mono / Tonal / Palette / RGB / Original)
 
 ### Export
 - [ ] MP4 export (MediaRecorder API)
@@ -70,6 +101,7 @@
 - Second effect (ASCII or halftone as standalone effect)
 - Effect combinator
 - HTML export
+- Mobile optimisation
 
 ---
 

@@ -5,7 +5,7 @@
 Raster is a browser-based image effect tool. Drop in a photo, apply a visual effect, download the result. No login, no signup, no friction. Just open and experiment.
 
 **Live:** https://raster-khaki.vercel.app
-**Status:** V1 shipped — bitmap dither, camera input, PNG/JPG/TXT export
+**Status:** V2.2 shipped — bitmap dither, camera input, colour output, PNG/JPG/TXT export
 
 ## Why does it exist?
 
@@ -30,7 +30,7 @@ Immediate. Tactile. Like a darkroom tool that runs in the browser. The aesthetic
 
 ## Aesthetic principles
 
-- Black and white foundation
+- Monochromatic foundation — black/white default, two-colour output supported
 - IBM Plex Mono typography
 - Swiss grid discipline — 8px base unit
 - No decoration, no gradients, no shadows
