@@ -1,23 +1,50 @@
 # Raster — ROADMAP.md
 
-## Milestone 1 — Ship (this weekend)
+## Milestone 1 — Ship ✓
 - [x] Project scaffold
-- [x] GitHub repo
-- [x] Vercel deployment
-- [ ] PROJECT.md + REQUIREMENTS.md + DECISIONS.md complete
-- [ ] Bitmap effect working (image upload)
-- [ ] Camera input working
-- [ ] PNG + GIF + TXT export working
+- [x] GitHub repo + Vercel deployment
+- [x] Live at raster-khaki.vercel.app
+- [x] Bitmap effect (Bayer 2×2, 4×4, 8×8, Halftone, Noise)
+- [x] Image upload, drag+drop, paste, clipboard
+- [x] Camera input with real-time dither
+- [x] PNG + JPG + TXT export
+- [x] PROJECT.md + REQUIREMENTS.md + DECISIONS.md + ROADMAP.md
+
+---
+
+## Milestone 2 — Deepen the dither
+- [ ] Floyd-Steinberg error diffusion
+- [ ] Atkinson dithering
+- [ ] Blue noise dithering
+- [ ] Line screen / horizontal scan
+- [ ] Vertical bar dither
+- [ ] GIF export (animated, from camera frames)
 - [ ] Umami analytics installed
-- [ ] Live at raster-khaki.vercel.app
-
-## Milestone 2 — Evolve
 - [ ] Custom domain
-- [ ] Second effect
-- [ ] MP4 export
-- [ ] Instagram growth tracking
 
-## Milestone 3 — Expand
-- [ ] Third effect
+---
+
+## Milestone 3 — Colour + polish
+- [ ] Light / dark mode — full UI inversion
+- [ ] Colour output mode (Mono / Tonal / Original)
+- [ ] Canvas zoom — pixel-perfect inspection
+- [ ] MP4 export (MediaRecorder API)
+- [ ] SVG export
+
+---
+
+## Milestone 4 — Expand
+- [ ] Second effect (ASCII or halftone as standalone)
 - [ ] Effect combinator
-- [ ] SVG / HTML export
+- [ ] Instagram growth tracking
+- [ ] Preset saves / named looks
+- [ ] Side-by-side before/after view
+
+---
+
+## Out of scope (forever)
+- User accounts
+- Server-side image storage
+- Monetisation
+- Post-processing (CRT, Bloom, Phosphor) — wrong aesthetic
+- Frameworks unless genuinely necessary

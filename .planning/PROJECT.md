@@ -4,10 +4,13 @@
 
 Raster is a browser-based image effect tool. Drop in a photo, apply a visual effect, download the result. No login, no signup, no friction. Just open and experiment.
 
+**Live:** https://raster-khaki.vercel.app
+**Status:** V1 shipped — bitmap dither, camera input, PNG/JPG/TXT export
+
 ## Why does it exist?
 
 Three reasons:
-1. A learning lab for creative coding (effects built in Canvas API / JS)
+1. A learning lab for creative coding — effects built in Canvas API / vanilla JS
 2. A content engine for ORG — images made with Raster get posted to Instagram
 3. An experiment in virality — can a free tool spread on its own?
 
@@ -29,6 +32,15 @@ Immediate. Tactile. Like a darkroom tool that runs in the browser. The aesthetic
 
 - Black and white foundation
 - IBM Plex Mono typography
-- Swiss grid discipline
-- No decoration, no gradients, no noise
+- Swiss grid discipline — 8px base unit
+- No decoration, no gradients, no shadows
 - The output should feel built, not styled
+- Reference: Joy Division, Swiss modernism, ASCII art
+
+## Stack
+
+- Single `index.html` shell + `effects/` folder
+- Vanilla JS + Canvas API
+- No frameworks, no build step
+- Deployed on Vercel, auto-deploys from GitHub main
+- Repo: https://github.com/Odonata-Research-Group/raster

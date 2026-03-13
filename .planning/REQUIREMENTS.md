@@ -1,43 +1,81 @@
 # Raster — REQUIREMENTS.md
 
-## V1 (Launch weekend)
+## V1 (Shipped)
 
 ### Input
-- [ ] Image upload (drag + drop or file picker)
-- [ ] Take a photo (device camera)
-- [ ] Live camera feed (webcam / phone)
+- [x] Image upload (drag + drop or file picker)
+- [x] Paste from clipboard
+- [x] Live camera feed with real-time dither
 
 ### Effect — Bitmap/Dither
-- [ ] Real-time canvas preview
-- [ ] Adjustable parameters (dot size, threshold, pattern)
-- [ ] Invert toggle
+- [x] Real-time canvas preview
+- [x] Bayer 2×2, 4×4, 8×8 ordered dither
+- [x] Halftone pattern
+- [x] Noise pattern
+- [x] Scale slider (pixel block size)
+- [x] Threshold slider
+- [x] Contrast slider
+- [x] Invert toggle
 
-### Output
-- [ ] Download as PNG
-- [ ] Download as JPG
-- [ ] Download as GIF (animated, live camera frames)
-- [ ] Download as TXT (ASCII version)
-
-### Analytics
-- [ ] Umami installed (page views, download events)
+### Export
+- [x] Download as PNG
+- [x] Download as JPG
+- [x] Download as TXT (ASCII)
 
 ### Constraints
-- Single HTML file + effects/bitmap.js
-- No frameworks, no build step
-- No login, no backend
-- Must work on mobile (camera feature)
+- [x] Single HTML file + effects/ folder
+- [x] No frameworks, no build step
+- [x] No login, no backend
+- [x] Works on mobile (camera feature)
 
-## V2 (Next sprint)
-- MP4 export (MediaRecorder API)
-- Second effect (ASCII or halftone)
-- SVG export
+---
+
+## V2 (Current sprint)
+
+### Dither — new algorithms
+- [ ] Floyd-Steinberg error diffusion
+- [ ] Atkinson dithering
+- [ ] Blue noise dithering
+- [ ] Line screen / horizontal scan
+- [ ] Vertical bar dither
+
+### Export
+- [ ] GIF export (animated, from camera frames)
+
+### Analytics
+- [ ] Umami installed (page views, PNG / GIF / TXT download events)
+- [ ] Custom domain
+
+---
 
 ## V3
-- Third effect
-- HTML export
+
+### UI
+- [ ] Light / dark mode toggle — full inversion (black UI + white output ↔ white UI + black output)
+- [ ] Canvas zoom — pixel-perfect inspection of dithered output
+
+### Colour
+- [ ] Colour output mode — Mode selector (Mono / Tonal / Original)
+
+### Export
+- [ ] MP4 export (MediaRecorder API)
+- [ ] SVG export
+
+---
+
+## Backlog (unscheduled)
+
+- Preset saves / named looks
+- Side-by-side before/after view
+- Second effect (ASCII or halftone as standalone effect)
 - Effect combinator
+- HTML export
+
+---
 
 ## Out of scope (forever)
 - User accounts
 - Saving/storing images server-side
 - Monetisation
+- Post-processing effects (CRT, Phosphor, Bloom, Scanlines) — wrong aesthetic for ORG
+- Chromatic aberration controls — wrong aesthetic for ORG
