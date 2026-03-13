@@ -655,8 +655,8 @@ function render(sourceBitmap) {
   const maxW = wrap.clientWidth;
   const maxH = wrap.clientHeight;
 
-  let srcW = sourceBitmap.width;
-  let srcH = sourceBitmap.height;
+  let srcW = sourceBitmap.videoWidth || sourceBitmap.width;
+  let srcH = sourceBitmap.videoHeight || sourceBitmap.height;
 
   // Fit to container
   const ratio = Math.min(maxW / srcW, maxH / srcH);
@@ -691,7 +691,7 @@ function render(sourceBitmap) {
 // ── Render loop (camera)
 function loop() {
   if (state.mode !== 'camera' || !state.cameraStream) return;
-  if (videoEl.readyState >= 2) {
+  if (videoEl.readyState >= 2 && videoEl.videoWidth > 0) {
     render(videoEl);
   }
   state.rafId = requestAnimationFrame(loop);
