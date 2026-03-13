@@ -360,6 +360,56 @@
       50% { opacity: 0.3; }
     }
 
+    /* ── COLOUR CONTROLS ── */
+    .colour-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .colour-label {
+      font-size: 9px;
+      color: var(--mid);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+    }
+
+    .colour-input-wrap {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .colour-swatch {
+      width: 14px;
+      height: 14px;
+      border: 1px solid var(--border);
+      cursor: pointer;
+      flex-shrink: 0;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .colour-swatch input[type="color"] {
+      position: absolute;
+      inset: -4px;
+      width: calc(100% + 8px);
+      height: calc(100% + 8px);
+      opacity: 0;
+      cursor: pointer;
+      border: none;
+      padding: 0;
+    }
+
+    .colour-hex {
+      font-size: 10px;
+      color: var(--fg);
+      letter-spacing: 0.05em;
+      font-family: var(--font);
+      text-transform: uppercase;
+    }
+
     /* ── LOADING ── */
     .processing {
       position: absolute;
@@ -472,6 +522,31 @@
           <div class="toggle" id="togInvert"></div>
         </div>
 
+        <!-- COLOUR -->
+        <div style="margin-top: 16px;">
+          <div class="group-label">Colour</div>
+
+          <div class="colour-row">
+            <span class="colour-label">Ink</span>
+            <div class="colour-input-wrap">
+              <div class="colour-swatch" id="swatchInk">
+                <input type="color" id="pickerInk" value="#ffffff" />
+              </div>
+              <span class="colour-hex" id="hexInk">#ffffff</span>
+            </div>
+          </div>
+
+          <div class="colour-row">
+            <span class="colour-label">Paper</span>
+            <div class="colour-input-wrap">
+              <div class="colour-swatch" id="swatchPaper">
+                <input type="color" id="pickerPaper" value="#000000" />
+              </div>
+              <span class="colour-hex" id="hexPaper">#000000</span>
+            </div>
+          </div>
+        </div>
+
       </div>
 
       <!-- OUTPUT -->
@@ -517,6 +592,8 @@ const state = {
   threshold: 0,
   contrast: 1.0,
   pattern: 'bayer4',
+  inkColor: '#ffffff',
+  paperColor: '#000000',
   cameraStream: null,
   rafId: null,
   frameW: 0,
@@ -546,6 +623,12 @@ const valScale    = document.getElementById('valScale');
 const valThreshold = document.getElementById('valThreshold');
 const valContrast  = document.getElementById('valContrast');
 const togInvert   = document.getElementById('togInvert');
+const pickerInk   = document.getElementById('pickerInk');
+const pickerPaper = document.getElementById('pickerPaper');
+const swatchInk   = document.getElementById('swatchInk');
+const swatchPaper = document.getElementById('swatchPaper');
+const hexInk      = document.getElementById('hexInk');
+const hexPaper    = document.getElementById('hexPaper');
 
 const statusDims   = document.getElementById('statusDims');
 const statusEffect = document.getElementById('statusEffect');
@@ -584,9 +667,21 @@ const BAYER = {
   })(),
 };
 
+// ── Colour helpers
+function hexToRgb(hex) {
+  const h = hex.replace('#', '');
+  return [
+    parseInt(h.slice(0, 2), 16),
+    parseInt(h.slice(2, 4), 16),
+    parseInt(h.slice(4, 6), 16),
+  ];
+}
+
 // ── Dither engine
 function dither(imageData, w, h) {
   const { pattern, scale, threshold, contrast, invert } = state;
+  const inkRgb   = hexToRgb(state.inkColor);
+  const paperRgb = hexToRgb(state.paperColor);
   const src = imageData.data;
 
   // output canvas (scaled down)
@@ -630,8 +725,9 @@ function dither(imageData, w, h) {
     for (let i = 0; i < ow * oh; i++) {
       let bit = gray[i] > 127 ? 255 : 0;
       if (invert) bit = 255 - bit;
+      const col = bit === 255 ? inkRgb : paperRgb;
       const di = i * 4;
-      dst[di] = dst[di+1] = dst[di+2] = bit;
+      dst[di] = col[0]; dst[di+1] = col[1]; dst[di+2] = col[2];
       dst[di+3] = 255;
     }
     return { imageData: out, ow, oh };
@@ -674,8 +770,9 @@ function dither(imageData, w, h) {
     for (let i = 0; i < ow * oh; i++) {
       let bit = gray[i] > 127 ? 255 : 0;
       if (invert) bit = 255 - bit;
+      const col = bit === 255 ? inkRgb : paperRgb;
       const di = i * 4;
-      dst[di] = dst[di+1] = dst[di+2] = bit;
+      dst[di] = col[0]; dst[di+1] = col[1]; dst[di+2] = col[2];
       dst[di+3] = 255;
     }
     return { imageData: out, ow, oh };
@@ -724,10 +821,11 @@ function dither(imageData, w, h) {
 
       if (invert) bit = 255 - bit;
 
+      const col = bit === 255 ? inkRgb : paperRgb;
       const di = (py * ow + px) * 4;
-      dst[di]   = bit;
-      dst[di+1] = bit;
-      dst[di+2] = bit;
+      dst[di]   = col[0];
+      dst[di+1] = col[1];
+      dst[di+2] = col[2];
       dst[di+3] = 255;
     }
   }
@@ -947,6 +1045,30 @@ selPattern.addEventListener('change', () => {
 togInvert.addEventListener('click', () => {
   state.invert = !state.invert;
   togInvert.classList.toggle('on', state.invert);
+  rerender();
+});
+
+// ── Colour controls
+function applySwatchBg(swatch, hex) {
+  swatch.style.background = hex;
+  // keep border visible on very light/dark colours
+  swatch.style.borderColor = hex === '#ffffff' || hex === '#000000' ? 'var(--border)' : hex;
+}
+
+applySwatchBg(swatchInk,   state.inkColor);
+applySwatchBg(swatchPaper, state.paperColor);
+
+pickerInk.addEventListener('input', () => {
+  state.inkColor = pickerInk.value;
+  hexInk.textContent = pickerInk.value;
+  applySwatchBg(swatchInk, pickerInk.value);
+  rerender();
+});
+
+pickerPaper.addEventListener('input', () => {
+  state.paperColor = pickerPaper.value;
+  hexPaper.textContent = pickerPaper.value;
+  applySwatchBg(swatchPaper, pickerPaper.value);
   rerender();
 });
 
