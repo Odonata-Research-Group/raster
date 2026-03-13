@@ -22,6 +22,14 @@
       --control-h: 36px;
     }
 
+    html.light {
+      --bg: #ffffff;
+      --fg: #000000;
+      --mid: #888888;
+      --dim: #eeeeee;
+      --border: #cccccc;
+    }
+
     html, body {
       background: var(--bg);
       color: var(--fg);
@@ -157,13 +165,24 @@
     .sidebar::-webkit-scrollbar-track { background: transparent; }
     .sidebar::-webkit-scrollbar-thumb { background: var(--border); }
 
+    /* ── Export button prominence ── */
+    .export-btn {
+      border-color: var(--mid);
+    }
+
+    .export-btn:not(:disabled):hover {
+      border-color: var(--fg);
+      background: rgba(255,255,255,0.04);
+    }
+
     /* ── CONTROL GROUPS ── */
     .group-label {
-      font-size: 9px;
-      color: var(--mid);
+      font-size: 10px;
+      font-weight: 500;
+      color: var(--fg);
       letter-spacing: 0.2em;
       text-transform: uppercase;
-      margin-bottom: 10px;
+      margin-bottom: 12px;
       padding-bottom: 6px;
       border-bottom: 1px solid var(--border);
     }
@@ -221,13 +240,15 @@
 
     .param-name {
       font-size: 9px;
+      font-weight: 300;
       color: var(--mid);
       letter-spacing: 0.15em;
       text-transform: uppercase;
     }
 
     .param-val {
-      font-size: 10px;
+      font-size: 11px;
+      font-weight: 400;
       color: var(--fg);
       min-width: 24px;
       text-align: right;
@@ -284,6 +305,7 @@
 
     .toggle-label {
       font-size: 9px;
+      font-weight: 300;
       color: var(--mid);
       letter-spacing: 0.15em;
       text-transform: uppercase;
@@ -370,6 +392,7 @@
 
     .colour-label {
       font-size: 9px;
+      font-weight: 300;
       color: var(--mid);
       letter-spacing: 0.15em;
       text-transform: uppercase;
@@ -410,6 +433,153 @@
       text-transform: uppercase;
     }
 
+    /* ── THEME TOGGLE ── */
+    .theme-toggle {
+      background: transparent;
+      border: none;
+      color: var(--mid);
+      font-family: var(--font);
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      cursor: pointer;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      text-transform: uppercase;
+      transition: color 0.15s;
+    }
+
+    .theme-toggle:hover { color: var(--fg); }
+
+    .theme-toggle-icon {
+      width: 12px;
+      height: 12px;
+      border: 1px solid currentColor;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    /* ── MODAL ── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+    }
+
+    html.light .modal-overlay {
+      background: rgba(255,255,255,0.85);
+    }
+
+    .modal-overlay.open {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .modal {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      max-width: 480px;
+      width: calc(100% - 48px);
+      padding: 32px;
+      position: relative;
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      background: transparent;
+      border: none;
+      color: var(--mid);
+      font-family: var(--font);
+      font-size: 14px;
+      cursor: pointer;
+      padding: 4px;
+      line-height: 1;
+      transition: color 0.15s;
+    }
+
+    .modal-close:hover { color: var(--fg); }
+
+    .modal-title {
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--fg);
+      margin-bottom: 24px;
+    }
+
+    .modal-body {
+      font-size: 11px;
+      font-weight: 300;
+      color: var(--mid);
+      line-height: 2;
+      letter-spacing: 0.04em;
+    }
+
+    .modal-body p { margin-bottom: 16px; }
+    .modal-body p:last-child { margin-bottom: 0; }
+
+    .modal-credit {
+      margin-top: 32px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+      font-size: 10px;
+      color: var(--mid);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+    }
+
+    /* ── SIDEBAR FOOTER ── */
+    .sidebar-footer {
+      margin-top: auto;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .footer-link {
+      font-size: 9px;
+      font-weight: 300;
+      color: var(--mid);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      text-decoration: none;
+      cursor: pointer;
+      background: none;
+      border: none;
+      padding: 0;
+      font-family: var(--font);
+      text-align: left;
+      transition: color 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .footer-link:hover { color: var(--fg); }
+
+    .footer-link-arrow {
+      opacity: 0;
+      transition: opacity 0.15s;
+      font-size: 9px;
+    }
+
+    .footer-link:hover .footer-link-arrow { opacity: 1; }
+
     /* ── LOADING ── */
     .processing {
       position: absolute;
@@ -436,7 +606,10 @@
   <!-- HEADER -->
   <header>
     <div class="wordmark">Raster</div>
-    <div class="header-meta">Bitmap — V1</div>
+    <button class="theme-toggle" id="themeToggle" aria-label="Toggle light mode">
+      <span class="theme-toggle-icon">◑</span>
+      <span id="themeLabel">Light</span>
+    </button>
   </header>
 
   <!-- MAIN -->
@@ -549,12 +722,25 @@
 
       </div>
 
-      <!-- OUTPUT -->
+      <!-- EXPORT -->
       <div class="group">
         <div class="group-label">Export</div>
-        <button class="btn" id="btnPNG" disabled>↓ PNG</button>
-        <button class="btn" id="btnJPG" disabled>↓ JPG</button>
-        <button class="btn" id="btnTXT" disabled>↓ TXT (ASCII)</button>
+        <button class="btn export-btn" id="btnPNG" disabled>↓ PNG</button>
+        <button class="btn export-btn" id="btnJPG" disabled>↓ JPG</button>
+        <button class="btn export-btn" id="btnTXT" disabled>↓ TXT (ASCII)</button>
+      </div>
+
+      <!-- FOOTER LINKS -->
+      <div class="sidebar-footer">
+        <button class="footer-link" id="btnAbout">
+          About <span class="footer-link-arrow">→</span>
+        </button>
+        <a class="footer-link" href="#" id="linkFollow" target="_blank" rel="noopener">
+          Follow <span class="footer-link-arrow">↗</span>
+        </a>
+        <a class="footer-link" href="https://github.com/Odonata-Research-Group/raster" target="_blank" rel="noopener">
+          GitHub <span class="footer-link-arrow">↗</span>
+        </a>
       </div>
 
     </div>
@@ -572,6 +758,20 @@
         <span id="liveLabel">—</span>
       </span>
       <span>raster-khaki.vercel.app</span>
+    </div>
+  </div>
+
+  <!-- ABOUT MODAL -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <button class="modal-close" id="modalClose" aria-label="Close">✕</button>
+      <div class="modal-title" id="modalTitle">Raster</div>
+      <div class="modal-body">
+        <p>There was a time when the internet felt different. You needed a tool? You found one, downloaded it and used it. Done. No account. No trial countdown. Just software made by people who wanted to solve a problem and share the solution.</p>
+        <p>Things have changed — and not all of it is bad. But some tools should just exist. Small utilities, simple fixes. Stuff that solves one problem and doesn't need a login, a pricing tier, or a 14-day reminder email.</p>
+        <p>Not everything needs to be a business. So this one's free.</p>
+      </div>
+      <div class="modal-credit">Made by Nick — Odonata Research Group</div>
     </div>
   </div>
 
@@ -1118,6 +1318,30 @@ document.addEventListener('paste', (e) => {
 window.addEventListener('resize', () => {
   if (state.mode === 'image' && state.source) render(state.source);
 });
+
+// ── Theme toggle
+const themeToggle  = document.getElementById('themeToggle');
+const themeLabel   = document.getElementById('themeLabel');
+let isLight = false;
+
+themeToggle.addEventListener('click', () => {
+  isLight = !isLight;
+  document.documentElement.classList.toggle('light', isLight);
+  themeLabel.textContent = isLight ? 'Dark' : 'Light';
+});
+
+// ── About modal
+const modalOverlay = document.getElementById('modalOverlay');
+const modalClose   = document.getElementById('modalClose');
+const btnAbout     = document.getElementById('btnAbout');
+
+function openModal()  { modalOverlay.classList.add('open'); }
+function closeModal() { modalOverlay.classList.remove('open'); }
+
+btnAbout.addEventListener('click', openModal);
+modalClose.addEventListener('click', closeModal);
+modalOverlay.addEventListener('click', (e) => { if (e.target === modalOverlay) closeModal(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
 
 // ── Init
 updateStatus();
