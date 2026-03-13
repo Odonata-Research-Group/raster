@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>RASTER</title>
+  <title>Floyd Steinberg</title>
   <meta name="description" content="Browser-based bitmap dithering tool. Drop an image, apply effects, download." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -605,7 +605,7 @@
 
   <!-- HEADER -->
   <header>
-    <div class="wordmark">Raster</div>
+    <div class="wordmark">Floyd Steinberg</div>
     <button class="theme-toggle" id="themeToggle" aria-label="Toggle light mode">
       <span class="theme-toggle-icon">◑</span>
       <span id="themeLabel">Light</span>
@@ -735,11 +735,11 @@
         <button class="footer-link" id="btnAbout">
           About <span class="footer-link-arrow">→</span>
         </button>
-        <a class="footer-link" href="#" id="linkFollow" target="_blank" rel="noopener">
-          Follow <span class="footer-link-arrow">↗</span>
+        <a class="footer-link" href="https://instagram.com/floydsteinberg" id="linkFollow" target="_blank" rel="noopener">
+          Follow <span class="footer-link-arrow">→</span>
         </a>
         <a class="footer-link" href="https://github.com/Odonata-Research-Group/raster" target="_blank" rel="noopener">
-          GitHub <span class="footer-link-arrow">↗</span>
+          GitHub <span class="footer-link-arrow">→</span>
         </a>
       </div>
 
@@ -757,7 +757,7 @@
         <span class="badge-dot" id="liveDot"></span>
         <span id="liveLabel">—</span>
       </span>
-      <span>raster-khaki.vercel.app</span>
+      <span>floydsteinberg.art</span>
     </div>
   </div>
 
@@ -765,13 +765,10 @@
   <div class="modal-overlay" id="modalOverlay">
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
       <button class="modal-close" id="modalClose" aria-label="Close">✕</button>
-      <div class="modal-title" id="modalTitle">Raster</div>
+      <div class="modal-title" id="modalTitle">Floyd Steinberg</div>
       <div class="modal-body">
-        <p>There was a time when the internet felt different. You needed a tool? You found one, downloaded it and used it. Done. No account. No trial countdown. Just software made by people who wanted to solve a problem and share the solution.</p>
-        <p>Things have changed — and not all of it is bad. But some tools should just exist. Small utilities, simple fixes. Stuff that solves one problem and doesn't need a login, a pricing tier, or a 14-day reminder email.</p>
-        <p>Not everything needs to be a business. So this one's free.</p>
+        <p>In 1976, Robert W. Floyd and Louis Steinberg published a paper called "An Adaptive Algorithm for Spatial Greyscale." The problem they were solving: a pixel can only be on or off, but an image has gradients. Their solution was to accept the error each time a pixel got rounded, then distribute it forward into the neighbouring pixels — 7/16ths to the right, 5/16ths below, 3/16ths below-left, 1/16th below-right. Those specific values were found by trial and error, guided by the goal of making a field of 50% grey come out as a perfect checkerboard. It worked. Nearly fifty years later the algorithm still runs inside almost every printer, image editor, and display pipeline on earth. It's also one of seven patterns you can apply here.</p>
       </div>
-      <div class="modal-credit">Made by Nick — Odonata Research Group</div>
     </div>
   </div>
 
@@ -779,7 +776,7 @@
 
 <script>
 /* ────────────────────────────────────────────────
-   RASTER — V1 — Bitmap Dither Engine
+   FLOYD STEINBERG — Bitmap Dither Engine
    Canvas API · Vanilla JS · No dependencies
 ──────────────────────────────────────────────── */
 
