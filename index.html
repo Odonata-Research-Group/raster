@@ -108,7 +108,6 @@
       background: var(--bg);
       overflow: hidden;
       border-right: 1px solid var(--border);
-      touch-action: none;
     }
 
     #canvas {
@@ -558,7 +557,7 @@
     .modal-body {
       font-size: 11px;
       font-weight: 300;
-      color: var(--fg);
+      color: var(--mid);
       line-height: 2;
       letter-spacing: 0.04em;
     }
@@ -631,57 +630,6 @@
     }
 
     .processing.show { opacity: 1; }
-
-    /* ── ZOOM INDICATOR ── */
-    .zoom-indicator {
-      position: absolute;
-      bottom: 12px;
-      right: 12px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      padding: 0 8px;
-      height: 28px;
-      font-family: var(--font);
-      z-index: 10;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.15s;
-    }
-
-    .zoom-indicator.visible {
-      opacity: 1;
-      pointer-events: all;
-    }
-
-    .zoom-btn {
-      background: transparent;
-      border: none;
-      color: var(--fg);
-      font-family: var(--font);
-      font-size: 16px;
-      line-height: 1;
-      cursor: pointer;
-      padding: 0;
-      display: flex;
-      align-items: center;
-      transition: color 0.1s;
-      -webkit-user-select: none;
-      user-select: none;
-    }
-
-    .zoom-btn:disabled { color: var(--border); cursor: not-allowed; }
-    .zoom-btn:not(:disabled):hover { color: var(--fg); }
-
-    .zoom-val {
-      font-size: 10px;
-      letter-spacing: 0.12em;
-      color: var(--fg);
-      min-width: 38px;
-      text-align: center;
-    }
 
     /* ── MOBILE ── */
     @media (max-width: 480px) {
@@ -765,9 +713,6 @@
       .btn   { font-size: 12px; }
       select { font-size: 12px; }
 
-      /* Theme toggle — match param label size */
-      .theme-toggle { font-size: 12px; }
-
       /* Colour labels */
       .colour-label { font-size: 12px; font-weight: 400; letter-spacing: 0.1em; }
       .colour-hex   { font-size: 12px; }
@@ -828,12 +773,6 @@
       </div>
 
       <div class="processing" id="processing">Processing…</div>
-
-      <div class="zoom-indicator" id="zoomIndicator">
-        <button class="zoom-btn" id="zoomOut" aria-label="Zoom out">−</button>
-        <span class="zoom-val" id="zoomVal">100%</span>
-        <button class="zoom-btn" id="zoomIn" aria-label="Zoom in">+</button>
-      </div>
     </div>
 
     <!-- SIDEBAR -->
@@ -846,6 +785,16 @@
         <button class="btn" id="btnCamera">◉ Camera</button>
         <button class="btn danger" id="btnClear" disabled>✕ Clear</button>
         <input type="file" id="fileInput" accept="image/*" />
+      </div>
+
+      <!-- PRESETS -->
+      <div class="group">
+        <div class="group-label">Presets</div>
+        <button class="btn preset-btn" id="presetNewsprint">Newsprint</button>
+        <button class="btn preset-btn" id="presetZine">Zine</button>
+        <button class="btn preset-btn" id="presetGlitch">Glitch</button>
+        <button class="btn preset-btn" id="presetLoFi">Lo-Fi</button>
+        <button class="btn preset-btn" id="presetRaw">Raw</button>
       </div>
 
       <!-- EFFECT -->
@@ -1034,10 +983,6 @@ const state = {
   frameH: 0,
   gifRecording: false,
   gifFrames: [],
-  // Zoom / pan (CSS transform only — never touches render pipeline)
-  zoom: 1,
-  panX: 0,
-  panY: 0,
 };
 
 // ── Elements
@@ -1437,7 +1382,6 @@ function clearAll() {
   state.mode   = 'idle';
   canvas.width  = 0;
   canvas.height = 0;
-  resetZoom();
   dropZone.classList.remove('hidden');
   setHasImage(false);
   updateStatus();
@@ -1449,7 +1393,6 @@ function setHasImage(has) {
   btnPNG.disabled   = !has;
   btnJPG.disabled   = !has;
   btnGIF.disabled   = !has;
-  zoomIndicator.classList.toggle('visible', has);
 }
 
 function showProcessing() { processing.classList.add('show'); }
@@ -1564,55 +1507,124 @@ function downloadCanvas(type, quality) {
   a.click();
 }
 
+// ── Presets
+const PRESETS = {
+  newsprint: { pattern: 'bayer4',   scale: 3, threshold: 10, contrast: 1.4, brightness:   0, blur: 1, pixelate: 1, scatter: 0, invert: false },
+  zine:      { pattern: 'atkinson', scale: 2, threshold: 20, contrast: 1.6, brightness: -10, blur: 0, pixelate: 1, scatter: 0, invert: false },
+  glitch:    { pattern: 'noise',    scale: 1, threshold:  0, contrast: 1.8, brightness:   0, blur: 0, pixelate: 1, scatter: 3, invert: true  },
+  lofi:      { pattern: 'bayer8',   scale: 4, threshold:  0, contrast: 1.2, brightness: -20, blur: 2, pixelate: 1, scatter: 0, invert: false },
+  raw:       { pattern: 'floyd',    scale: 1, threshold:  0, contrast: 1.0, brightness:   0, blur: 0, pixelate: 1, scatter: 0, invert: false },
+};
+
+function clearActivePreset() {
+  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+}
+
+function applyPreset(name, btn) {
+  const p = PRESETS[name];
+  if (!p) return;
+
+  // State
+  state.pattern    = p.pattern;
+  state.scale      = p.scale;
+  state.threshold  = p.threshold;
+  state.contrast   = p.contrast;
+  state.brightness = p.brightness;
+  state.blur       = p.blur;
+  state.pixelate   = p.pixelate;
+  state.scatter    = p.scatter;
+  state.invert     = p.invert;
+
+  // Sync UI
+  selPattern.value              = p.pattern;
+  sldScale.value                = p.scale;
+  sldThreshold.value            = p.threshold;
+  sldContrast.value             = p.contrast;
+  sldBrightness.value           = p.brightness;
+  sldBlur.value                 = p.blur;
+  sldPixelate.value             = p.pixelate;
+  sldScatter.value              = p.scatter;
+  valScale.textContent          = p.scale;
+  valThreshold.textContent      = p.threshold;
+  valContrast.textContent       = p.contrast.toFixed(1);
+  valBrightness.textContent     = p.brightness;
+  valBlur.textContent           = p.blur;
+  valPixelate.textContent       = p.pixelate;
+  valScatter.textContent        = p.scatter;
+  togInvert.classList.toggle('on', p.invert);
+
+  // Active state
+  clearActivePreset();
+  btn.classList.add('active');
+
+  rerender();
+}
+
+// ── Events: presets
+document.getElementById('presetNewsprint').addEventListener('click', function() { applyPreset('newsprint', this); });
+document.getElementById('presetZine').addEventListener('click',      function() { applyPreset('zine',      this); });
+document.getElementById('presetGlitch').addEventListener('click',    function() { applyPreset('glitch',    this); });
+document.getElementById('presetLoFi').addEventListener('click',      function() { applyPreset('lofi',      this); });
+document.getElementById('presetRaw').addEventListener('click',       function() { applyPreset('raw',       this); });
+
 // ── Events: controls
 sldScale.addEventListener('input', () => {
+  clearActivePreset();
   state.scale = +sldScale.value;
   valScale.textContent = state.scale;
   rerender();
 });
 
 sldThreshold.addEventListener('input', () => {
+  clearActivePreset();
   state.threshold = +sldThreshold.value;
   valThreshold.textContent = state.threshold;
   rerender();
 });
 
 sldContrast.addEventListener('input', () => {
+  clearActivePreset();
   state.contrast = +sldContrast.value;
   valContrast.textContent = state.contrast.toFixed(1);
   rerender();
 });
 
 sldBrightness.addEventListener('input', () => {
+  clearActivePreset();
   state.brightness = +sldBrightness.value;
   valBrightness.textContent = state.brightness;
   rerender();
 });
 
 sldBlur.addEventListener('input', () => {
+  clearActivePreset();
   state.blur = +sldBlur.value;
   valBlur.textContent = state.blur;
   rerender();
 });
 
 sldPixelate.addEventListener('input', () => {
+  clearActivePreset();
   state.pixelate = +sldPixelate.value;
   valPixelate.textContent = state.pixelate;
   rerender();
 });
 
 sldScatter.addEventListener('input', () => {
+  clearActivePreset();
   state.scatter = +sldScatter.value;
   valScatter.textContent = state.scatter;
   rerender();
 });
 
 selPattern.addEventListener('change', () => {
+  clearActivePreset();
   state.pattern = selPattern.value;
   rerender();
 });
 
 togInvert.addEventListener('click', () => {
+  clearActivePreset();
   state.invert = !state.invert;
   togInvert.classList.toggle('on', state.invert);
   rerender();
@@ -1712,142 +1724,6 @@ btnAbout.addEventListener('click', openModal);
 modalClose.addEventListener('click', closeModal);
 modalOverlay.addEventListener('click', (e) => { if (e.target === modalOverlay) closeModal(); });
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
-
-// ── Zoom / Pan
-const zoomIndicator = document.getElementById('zoomIndicator');
-const zoomOut       = document.getElementById('zoomOut');
-const zoomIn        = document.getElementById('zoomIn');
-const zoomVal       = document.getElementById('zoomVal');
-
-const zs = {
-  pointers:  new Map(),  // pointerId → {x, y}
-  lastDist:  0,
-  lastMidX:  0,
-  lastMidY:  0,
-  tapCount:  0,
-  tapTimer:  null,
-};
-
-function applyZoom() {
-  canvas.style.transform = `translate(${state.panX}px, ${state.panY}px) scale(${state.zoom})`;
-  zoomVal.textContent = `${Math.round(state.zoom * 100)}%`;
-  zoomOut.disabled = state.zoom <= 0.5;
-  zoomIn.disabled  = state.zoom >= 8;
-}
-
-function resetZoom() {
-  state.zoom = 1;
-  state.panX = 0;
-  state.panY = 0;
-  applyZoom();
-}
-
-function stepZoom(dir) {
-  // Zoom toward canvas centre — pan unchanged (midpoint = wrap centre)
-  state.zoom = parseFloat(Math.min(8, Math.max(0.5, state.zoom + dir * 0.25)).toFixed(2));
-  // Clamp pan so canvas doesn't disappear off-screen at new zoom
-  clampPan();
-  applyZoom();
-}
-
-function clampPan() {
-  if (state.zoom <= 0.5) { state.panX = 0; state.panY = 0; return; }
-  const wrap = document.getElementById('canvasWrap');
-  const maxPanX = (wrap.clientWidth  * (state.zoom - 1)) / 2;
-  const maxPanY = (wrap.clientHeight * (state.zoom - 1)) / 2;
-  state.panX = Math.max(-maxPanX, Math.min(maxPanX, state.panX));
-  state.panY = Math.max(-maxPanY, Math.min(maxPanY, state.panY));
-}
-
-// Pointer events — pinch to zoom + one-finger pan
-const canvasWrap = document.getElementById('canvasWrap');
-
-canvasWrap.addEventListener('pointerdown', (e) => {
-  // Don't intercept clicks on the drop zone or zoom buttons
-  if (e.target === zoomOut || e.target === zoomIn) return;
-  e.preventDefault();
-  zs.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-
-  if (zs.pointers.size === 2) {
-    const pts = [...zs.pointers.values()];
-    zs.lastDist = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
-    zs.lastMidX = (pts[0].x + pts[1].x) / 2;
-    zs.lastMidY = (pts[0].y + pts[1].y) / 2;
-  }
-
-  // Double-tap → reset zoom
-  if (zs.pointers.size === 1) {
-    zs.tapCount++;
-    if (zs.tapCount === 1) {
-      zs.tapTimer = setTimeout(() => { zs.tapCount = 0; }, 300);
-    } else if (zs.tapCount >= 2) {
-      clearTimeout(zs.tapTimer);
-      zs.tapCount = 0;
-      resetZoom();
-    }
-  }
-});
-
-canvasWrap.addEventListener('pointermove', (e) => {
-  if (!zs.pointers.has(e.pointerId)) return;
-
-  const prev = { ...zs.pointers.get(e.pointerId) };
-  zs.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-
-  if (zs.pointers.size === 2) {
-    const pts      = [...zs.pointers.values()];
-    const dist     = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
-    const midX     = (pts[0].x + pts[1].x) / 2;
-    const midY     = (pts[0].y + pts[1].y) / 2;
-    const rect     = canvasWrap.getBoundingClientRect();
-    const relMidX  = midX - rect.left;
-    const relMidY  = midY - rect.top;
-    const wW       = rect.width;
-    const wH       = rect.height;
-
-    if (zs.lastDist > 0) {
-      const delta   = dist / zs.lastDist;
-      const newZoom = Math.min(8, Math.max(0.5, state.zoom * delta));
-
-      // Adjust pan so the pinch midpoint stays fixed on canvas
-      state.panX += (relMidX - wW / 2) * (1 - newZoom / state.zoom);
-      state.panY += (relMidY - wH / 2) * (1 - newZoom / state.zoom);
-
-      // Pan from midpoint movement between frames
-      state.panX += midX - zs.lastMidX;
-      state.panY += midY - zs.lastMidY;
-
-      state.zoom = newZoom;
-    }
-
-    zs.lastDist = dist;
-    zs.lastMidX = midX;
-    zs.lastMidY = midY;
-    clampPan();
-    applyZoom();
-
-  } else if (zs.pointers.size === 1 && state.zoom > 1) {
-    // Single-finger pan when zoomed in
-    state.panX += e.clientX - prev.x;
-    state.panY += e.clientY - prev.y;
-    clampPan();
-    applyZoom();
-  }
-});
-
-function onPointerUp(e) {
-  zs.pointers.delete(e.pointerId);
-  if (zs.pointers.size < 2) zs.lastDist = 0;
-  // Snap back to 1× if somehow drifted below minimum
-  if (state.zoom <= 0.5) resetZoom();
-}
-
-canvasWrap.addEventListener('pointerup',     onPointerUp);
-canvasWrap.addEventListener('pointercancel', onPointerUp);
-
-// Zoom buttons
-zoomOut.addEventListener('click', () => stepZoom(-1));
-zoomIn.addEventListener('click',  () => stepZoom(+1));
 
 // ── Init
 updateStatus();
