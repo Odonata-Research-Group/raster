@@ -10,6 +10,13 @@
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js"></script>
 
+  <!-- Privacy-friendly analytics by Plausible -->
+  <script async src="https://plausible.io/js/pa-uis0LYs-GHMFAdhCPX512.js"></script>
+  <script>
+    window.plausible=window.plausible||function(){(plausible.q=plausible.q||[]).push(arguments)},plausible.init=plausible.init||function(i){plausible.o=i||{}};
+    plausible.init()
+  </script>
+
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -1512,6 +1519,7 @@ async function exportGIFStill() {
     a.href = url;
     a.click();
     URL.revokeObjectURL(url);
+    if (typeof plausible !== 'undefined') plausible('Download GIF');
     btnGIF.textContent = '↓ GIF';
     btnGIF.disabled = false;
   });
@@ -1566,6 +1574,7 @@ async function startGIFCapture() {
       a.href = url;
       a.click();
       URL.revokeObjectURL(url);
+      if (typeof plausible !== 'undefined') plausible('Download GIF');
       btnGIF.textContent = '↓ GIF';
       btnGIF.classList.remove('active');
       btnGIF.disabled = false;
@@ -1643,6 +1652,7 @@ function downloadCanvas(type, quality) {
   a.download = `floydsteinberg-${Date.now()}.${type}`;
   a.href     = url;
   a.click();
+  if (typeof plausible !== 'undefined') plausible(`Download ${type.toUpperCase()}`);
 }
 
 // ── Presets
