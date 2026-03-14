@@ -598,6 +598,58 @@
 
     .processing.show { opacity: 1; }
 
+    /* ── MOBILE ── */
+    @media (max-width: 480px) {
+
+      /* Layout: canvas locked top, controls scroll below */
+      main {
+        grid-template-columns: 1fr;
+        grid-template-rows: 50vh 1fr;
+        overflow: hidden;
+      }
+
+      .canvas-wrap {
+        height: 50vh;
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .sidebar {
+        width: 100%;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      /* Bigger touch targets */
+      :root { --control-h: 44px; }
+
+      /* Bigger slider thumb */
+      input[type=range]::-webkit-slider-thumb {
+        width: 20px;
+        height: 20px;
+      }
+
+      /* Bigger toggle */
+      .toggle {
+        width: 36px;
+        height: 18px;
+      }
+
+      .toggle::after {
+        width: 10px;
+        height: 10px;
+      }
+
+      .toggle.on::after { left: 22px; }
+
+      /* Status bar: hide right side to avoid collision */
+      .status-right { display: none; }
+
+      /* Drop zone: hide desktop label, show mobile label */
+      .drop-label-desktop { display: none; }
+      .drop-label-mobile  { display: block; }
+    }
+
   </style>
 </head>
 <body>
@@ -629,7 +681,8 @@
             <line x1="5" y1="8" x2="11" y2="8"/>
           </svg>
         </div>
-        <div class="drop-label">DROP IMAGE<br>OR CLICK TO UPLOAD</div>
+        <div class="drop-label drop-label-desktop">DROP IMAGE<br>OR CLICK TO UPLOAD</div>
+        <div class="drop-label drop-label-mobile" style="display:none;">TAP TO UPLOAD</div>
         <div class="drop-sub">JPG · PNG · GIF · WEBP</div>
       </div>
 
