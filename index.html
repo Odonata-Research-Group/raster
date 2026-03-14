@@ -631,6 +631,49 @@
 
     .processing.show { opacity: 1; }
 
+    /* ── ZOOM INDICATOR ── */
+    .zoom-indicator {
+      position: absolute;
+      bottom: 12px;
+      right: 12px;
+      display: none;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      padding: 0 8px;
+      height: 28px;
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      font-family: var(--font);
+      color: var(--fg);
+      user-select: none;
+    }
+
+    .zoom-indicator.visible { display: flex; }
+
+    .zoom-btn {
+      background: transparent;
+      border: none;
+      color: var(--fg);
+      font-family: var(--font);
+      font-size: 14px;
+      cursor: pointer;
+      padding: 0;
+      line-height: 1;
+      transition: opacity 0.15s;
+    }
+
+    .zoom-btn:hover { opacity: 0.6; }
+    .zoom-btn.dim   { opacity: 0.25; cursor: default; }
+
+    .zoom-level {
+      min-width: 36px;
+      text-align: center;
+      font-size: 10px;
+      letter-spacing: 0.1em;
+    }
+
     /* ── MOBILE ── */
     @media (max-width: 480px) {
 
@@ -773,6 +816,12 @@
       </div>
 
       <div class="processing" id="processing">Processing…</div>
+
+      <div class="zoom-indicator" id="zoomIndicator">
+        <button class="zoom-btn" id="zoomOut">−</button>
+        <span class="zoom-level" id="zoomLevel">100%</span>
+        <button class="zoom-btn" id="zoomIn">+</button>
+      </div>
     </div>
 
     <!-- SIDEBAR -->
@@ -909,6 +958,7 @@
         <div class="group-label">Export</div>
         <button class="btn export-btn" id="btnPNG" disabled>↓ PNG</button>
         <button class="btn export-btn" id="btnJPG" disabled>↓ JPG</button>
+        <button class="btn export-btn" id="btnSVG" disabled>↓ SVG</button>
         <button class="btn export-btn" id="btnGIF" disabled>↓ GIF</button>
       </div>
 
@@ -964,8 +1014,8 @@
 
 // ── State
 const state = {
-  source: null,     // ImageBitmap or null
-  mode: 'idle',     // idle | image | camera
+  source: null,
+  mode: 'idle',
   invert: false,
   scale: 2,
   threshold: 0,
@@ -983,6 +1033,10 @@ const state = {
   frameH: 0,
   gifRecording: false,
   gifFrames: [],
+  // zoom
+  zoomScale: 1,
+  zoomPanX: 0,
+  zoomPanY: 0,
 };
 
 // ── Elements
@@ -992,12 +1046,14 @@ const videoEl   = document.getElementById('videoEl');
 const dropZone  = document.getElementById('dropZone');
 const fileInput = document.getElementById('fileInput');
 const processing = document.getElementById('processing');
+const canvasWrap = document.getElementById('canvasWrap');
 
 const btnUpload  = document.getElementById('btnUpload');
 const btnCamera  = document.getElementById('btnCamera');
 const btnClear   = document.getElementById('btnClear');
 const btnPNG     = document.getElementById('btnPNG');
 const btnJPG     = document.getElementById('btnJPG');
+const btnSVG     = document.getElementById('btnSVG');
 const btnGIF     = document.getElementById('btnGIF');
 
 const selPattern    = document.getElementById('selPattern');
@@ -1234,9 +1290,8 @@ const offscreen = document.createElement('canvas');
 const offCtx    = offscreen.getContext('2d', { willReadFrequently: true });
 
 function render(sourceBitmap) {
-  const wrap = document.getElementById('canvasWrap');
-  const maxW = wrap.clientWidth;
-  const maxH = wrap.clientHeight;
+  const maxW = canvasWrap.clientWidth;
+  const maxH = canvasWrap.clientHeight;
 
   let srcW = sourceBitmap.videoWidth || sourceBitmap.width;
   let srcH = sourceBitmap.videoHeight || sourceBitmap.height;
@@ -1382,6 +1437,7 @@ function clearAll() {
   state.mode   = 'idle';
   canvas.width  = 0;
   canvas.height = 0;
+  resetZoom();
   dropZone.classList.remove('hidden');
   setHasImage(false);
   updateStatus();
@@ -1392,7 +1448,9 @@ function setHasImage(has) {
   btnClear.disabled = !has;
   btnPNG.disabled   = !has;
   btnJPG.disabled   = !has;
+  btnSVG.disabled   = !has;
   btnGIF.disabled   = !has;
+  zoomIndicator.classList.toggle('visible', has);
 }
 
 function showProcessing() { processing.classList.add('show'); }
@@ -1495,6 +1553,65 @@ function startGIFCapture() {
 
     gif.render();
   }, 3000);
+}
+
+// ── SVG export
+function downloadSVG() {
+  const scale   = state.scale;
+  const ow      = Math.ceil(state.frameW / scale);
+  const oh      = Math.ceil(state.frameH / scale);
+  const total   = ow * oh;
+
+  if (total > 640000) {
+    const proceed = confirm(`SVG will contain up to ${total.toLocaleString()} elements — file may be large. Continue?`);
+    if (!proceed) return;
+  }
+
+  // Read dithered pixel data from canvas
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const d = imageData.data;
+  const cw = canvas.width;
+  const ch = canvas.height;
+
+  const inkRgb   = hexToRgb(state.inkColor);
+  const paperRgb = hexToRgb(state.paperColor);
+  const inkHex   = state.inkColor;
+  const paperHex = state.paperColor;
+
+  // Sample dithered canvas at dithered resolution
+  const rects = [];
+  for (let py = 0; py < oh; py++) {
+    for (let px = 0; px < ow; px++) {
+      const sx = Math.min(Math.round(px * scale + scale / 2), cw - 1);
+      const sy = Math.min(Math.round(py * scale + scale / 2), ch - 1);
+      const i  = (sy * cw + sx) * 4;
+      const r = d[i], g = d[i+1], b = d[i+2];
+      // Determine if this is an ink pixel
+      const isInk = Math.abs(r - inkRgb[0]) < 16 && Math.abs(g - inkRgb[1]) < 16 && Math.abs(b - inkRgb[2]) < 16;
+      if (isInk) {
+        rects.push(`<rect x="${px}" y="${py}" width="1" height="1"/>`);
+      }
+    }
+  }
+
+  const svg = [
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${ow} ${oh}" shape-rendering="crispEdges">`,
+    `<rect width="${ow}" height="${oh}" fill="${paperHex}"/>`,
+    `<g fill="${inkHex}">`,
+    rects.join(''),
+    `</g>`,
+    `</svg>`
+  ].join('\n');
+
+  const blob = new Blob([svg], { type: 'image/svg+xml' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.download = `floydsteinberg-${Date.now()}.svg`;
+  a.href     = url;
+  a.click();
+  URL.revokeObjectURL(url);
+
+  if (typeof plausible !== 'undefined') plausible('Download SVG');
 }
 
 // ── Download helpers
@@ -1668,14 +1785,13 @@ btnClear.addEventListener('click', clearAll);
 // ── Events: export
 btnPNG.addEventListener('click', () => downloadCanvas('png'));
 btnJPG.addEventListener('click', () => downloadCanvas('jpg', 0.92));
+btnSVG.addEventListener('click', downloadSVG);
 btnGIF.addEventListener('click', downloadGIF);
 
 // ── Events: drag & drop
-const wrap = document.getElementById('canvasWrap');
-
-wrap.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragging'); });
-wrap.addEventListener('dragleave', () => { dropZone.classList.remove('dragging'); });
-wrap.addEventListener('drop', (e) => {
+canvasWrap.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragging'); });
+canvasWrap.addEventListener('dragleave', () => { dropZone.classList.remove('dragging'); });
+canvasWrap.addEventListener('drop', (e) => {
   e.preventDefault();
   dropZone.classList.remove('dragging');
   const file = e.dataTransfer.files[0];
@@ -1724,6 +1840,123 @@ btnAbout.addEventListener('click', openModal);
 modalClose.addEventListener('click', closeModal);
 modalOverlay.addEventListener('click', (e) => { if (e.target === modalOverlay) closeModal(); });
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+
+// ── Zoom
+const zoomIndicator = document.getElementById('zoomIndicator');
+const zoomLevelEl   = document.getElementById('zoomLevel');
+const zoomInBtn     = document.getElementById('zoomIn');
+const zoomOutBtn    = document.getElementById('zoomOut');
+
+const ZOOM_MIN  = 0.5;
+const ZOOM_MAX  = 8;
+const ZOOM_STEP = 0.25;
+
+function applyZoom() {
+  canvas.style.transform       = `translate(${state.zoomPanX}px, ${state.zoomPanY}px) scale(${state.zoomScale})`;
+  canvas.style.transformOrigin = 'center center';
+  const pct = Math.round(state.zoomScale * 100);
+  zoomLevelEl.textContent = pct + '%';
+  zoomInBtn.classList.toggle('dim',  state.zoomScale >= ZOOM_MAX);
+  zoomOutBtn.classList.toggle('dim', state.zoomScale <= ZOOM_MIN);
+}
+
+function clampPan() {
+  const wrapW = canvasWrap.clientWidth;
+  const wrapH = canvasWrap.clientHeight;
+  const cW    = canvas.width  * state.zoomScale;
+  const cH    = canvas.height * state.zoomScale;
+  const maxX  = Math.max(0, (cW - wrapW) / 2);
+  const maxY  = Math.max(0, (cH - wrapH) / 2);
+  state.zoomPanX = Math.max(-maxX, Math.min(maxX, state.zoomPanX));
+  state.zoomPanY = Math.max(-maxY, Math.min(maxY, state.zoomPanY));
+}
+
+function resetZoom() {
+  state.zoomScale = 1;
+  state.zoomPanX  = 0;
+  state.zoomPanY  = 0;
+  applyZoom();
+}
+
+zoomInBtn.addEventListener('click',  () => {
+  state.zoomScale = Math.min(ZOOM_MAX, Math.round((state.zoomScale + ZOOM_STEP) / ZOOM_STEP) * ZOOM_STEP);
+  clampPan();
+  applyZoom();
+});
+zoomOutBtn.addEventListener('click', () => {
+  state.zoomScale = Math.max(ZOOM_MIN, Math.round((state.zoomScale - ZOOM_STEP) / ZOOM_STEP) * ZOOM_STEP);
+  clampPan();
+  applyZoom();
+});
+
+// ── Pointer events for pinch-zoom + pan
+canvasWrap.style.touchAction = 'none';
+
+const pointers = new Map();
+let lastPinchDist = null;
+let lastMidX = null, lastMidY = null;
+let lastTap = 0;
+
+canvasWrap.addEventListener('pointerdown', (e) => {
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+});
+
+canvasWrap.addEventListener('pointermove', (e) => {
+  if (!pointers.has(e.pointerId)) return;
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+  const pts = [...pointers.values()];
+
+  if (pts.length === 2) {
+    // Pinch zoom
+    const dx   = pts[1].x - pts[0].x;
+    const dy   = pts[1].y - pts[0].y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const midX = (pts[0].x + pts[1].x) / 2;
+    const midY = (pts[0].y + pts[1].y) / 2;
+
+    if (lastPinchDist !== null) {
+      const ratio = dist / lastPinchDist;
+      state.zoomScale = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, state.zoomScale * ratio));
+    }
+    if (lastMidX !== null) {
+      state.zoomPanX += midX - lastMidX;
+      state.zoomPanY += midY - lastMidY;
+    }
+    lastPinchDist = dist;
+    lastMidX = midX;
+    lastMidY = midY;
+    clampPan();
+    applyZoom();
+
+  } else if (pts.length === 1 && state.zoomScale > 1) {
+    // Pan when zoomed
+    const prev = pointers.get(e.pointerId);
+    state.zoomPanX += e.clientX - prev.x;
+    state.zoomPanY += e.clientY - prev.y;
+    clampPan();
+    applyZoom();
+  }
+});
+
+function endPointer(e) {
+  pointers.delete(e.pointerId);
+  lastPinchDist = null;
+  lastMidX = null;
+  lastMidY = null;
+}
+
+canvasWrap.addEventListener('pointerup',     endPointer);
+canvasWrap.addEventListener('pointercancel', endPointer);
+
+// Double-tap to reset
+canvasWrap.addEventListener('pointerdown', (e) => {
+  const now = Date.now();
+  if (now - lastTap < 300 && pointers.size <= 1) {
+    resetZoom();
+  }
+  lastTap = now;
+});
 
 // ── Init
 updateStatus();
