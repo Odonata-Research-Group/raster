@@ -648,6 +648,51 @@
       /* Drop zone: hide desktop label, show mobile label */
       .drop-label-desktop { display: none; }
       .drop-label-mobile  { display: block; }
+
+      /* ── TYPOGRAPHY ── */
+
+      /* Group headers: Input, Effect, Colour, Export */
+      .group-label {
+        font-size: 13px;
+        letter-spacing: 0.18em;
+        margin-bottom: 16px;
+        padding-bottom: 8px;
+      }
+
+      /* Param labels: Pattern, Scale, Threshold etc. */
+      .param-name {
+        font-size: 12px;
+        font-weight: 400;
+        letter-spacing: 0.1em;
+      }
+
+      /* Param values: the numbers on the right */
+      .param-val { font-size: 13px; }
+
+      /* Invert label and equivalent toggle labels */
+      .toggle-label {
+        font-size: 12px;
+        font-weight: 400;
+        letter-spacing: 0.1em;
+      }
+
+      /* Button and select text */
+      .btn   { font-size: 12px; }
+      select { font-size: 12px; }
+
+      /* Colour labels */
+      .colour-label { font-size: 12px; font-weight: 400; letter-spacing: 0.1em; }
+      .colour-hex   { font-size: 12px; }
+
+      /* Footer links — always show arrow, no hover needed on touch */
+      .footer-link       { font-size: 11px; }
+      .footer-link-arrow { opacity: 1; }
+
+      /* ── BOTTOM PADDING ── */
+      /* env(safe-area-inset-bottom) handles iOS home indicator;
+         fallback 32px for Android / older browsers */
+      .sidebar        { padding-bottom: max(env(safe-area-inset-bottom, 0px), 32px); }
+      .sidebar-footer { padding-bottom: 32px; }
     }
 
   </style>
