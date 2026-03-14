@@ -900,6 +900,7 @@
         <button class="btn export-btn" id="btnPNG" disabled>↓ PNG</button>
         <button class="btn export-btn" id="btnJPG" disabled>↓ JPG</button>
         <button class="btn export-btn" id="btnGIF" disabled>↓ GIF</button>
+        <button class="btn export-btn" id="btnSVG" disabled>↓ SVG</button>
       </div>
 
       <!-- FOOTER LINKS -->
@@ -989,6 +990,7 @@ const btnClear   = document.getElementById('btnClear');
 const btnPNG     = document.getElementById('btnPNG');
 const btnJPG     = document.getElementById('btnJPG');
 const btnGIF     = document.getElementById('btnGIF');
+const btnSVG     = document.getElementById('btnSVG');
 
 const selPattern    = document.getElementById('selPattern');
 const sldScale      = document.getElementById('sldScale');
@@ -1383,6 +1385,7 @@ function setHasImage(has) {
   btnPNG.disabled   = !has;
   btnJPG.disabled   = !has;
   btnGIF.disabled   = !has;
+  btnSVG.disabled   = !has;
 }
 
 function showProcessing() { processing.classList.add('show'); }
@@ -1606,10 +1609,74 @@ btnCamera.addEventListener('click', () => {
 
 btnClear.addEventListener('click', clearAll);
 
+// ── SVG export
+function exportSVG() {
+  const w = canvas.width;
+  const h = canvas.height;
+  if (!w || !h) return;
+
+  // Work at dithered resolution (canvas is scaled up from dither output)
+  const dw = Math.ceil(w / state.scale);
+  const dh = Math.ceil(h / state.scale);
+
+  // Warn if output will be large
+  if (dw * dh > 640000) {
+    const ok = confirm(`SVG will contain ${(dw * dh).toLocaleString()} rectangles at this scale — file may be large. Continue?`);
+    if (!ok) return;
+  }
+
+  // Read pixel data from the displayed canvas
+  const imageData = ctx.getImageData(0, 0, w, h);
+  const px = imageData.data;
+
+  // Ink colour as rgb values for comparison (allow ±2 tolerance for JPEG artefacts)
+  const ink = hexToRgb(state.inkColor);
+
+  const rects = [];
+  const rectSize = state.scale;
+
+  for (let dy = 0; dy < dh; dy++) {
+    for (let dx = 0; dx < dw; dx++) {
+      // Sample the centre of each scaled cell in the displayed canvas
+      const sx = Math.min(Math.floor(dx * rectSize + rectSize / 2), w - 1);
+      const sy = Math.min(Math.floor(dy * rectSize + rectSize / 2), h - 1);
+      const i  = (sy * w + sx) * 4;
+      const r  = px[i], g = px[i+1], b = px[i+2];
+
+      // If this pixel matches ink colour, emit a rect
+      const isInk = Math.abs(r - ink[0]) < 8 &&
+                    Math.abs(g - ink[1]) < 8 &&
+                    Math.abs(b - ink[2]) < 8;
+
+      if (isInk) {
+        rects.push(`<rect x="${dx}" y="${dy}" width="1" height="1"/>`);
+      }
+    }
+  }
+
+  const svgContent = [
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${dw} ${dh}" shape-rendering="crispEdges">`,
+    `<rect width="${dw}" height="${dh}" fill="${state.paperColor}"/>`,
+    `<g fill="${state.inkColor}">`,
+    rects.join('\n'),
+    `</g>`,
+    `</svg>`
+  ].join('\n');
+
+  const blob = new Blob([svgContent], { type: 'image/svg+xml' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.download = `floydsteinberg-${Date.now()}.svg`;
+  a.href     = url;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 // ── Events: export
 btnPNG.addEventListener('click', () => downloadCanvas('png'));
 btnJPG.addEventListener('click', () => downloadCanvas('jpg', 0.92));
 btnGIF.addEventListener('click', downloadGIF);
+btnSVG.addEventListener('click', exportSVG);
 
 // ── Events: drag & drop
 const wrap = document.getElementById('canvasWrap');
