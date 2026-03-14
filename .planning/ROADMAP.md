@@ -47,26 +47,30 @@
 
 ---
 
-## Milestone 5 — Fix, export, measure (next)
-- [ ] GIF encoder fix — broken on desktop and mobile (CORS / worker issue suspected)
-- [ ] SVG export — dithered canvas to SVG rects, respects ink/paper colours
-- [ ] Favicon — dithered bitmap mark, 32×32px
-- [ ] Umami analytics — page views + PNG / JPG / GIF / SVG download events
-- [ ] Canvas pinch-to-zoom on mobile — canvas only, sidebar unaffected
+## Milestone 5 — Fix, export, measure ✓
+- [x] GIF encoder fixed — blob worker URL resolves CORS block on gif.worker.js
+- [x] SVG export — rect-per-pixel at dithered resolution, respects ink/paper colours, resolution warning, works in Figma/Illustrator
+- [x] Favicon — user-supplied image, circle-clipped at runtime, injected as PNG data URI
+- [x] Plausible analytics — page views + PNG / JPG / GIF / SVG download events, four goals configured
 
 ---
 
-## Milestone 6 — Expand the tool
+## Milestone 6 — Mobile zoom (next)
+- [ ] Canvas pinch-to-zoom — canvas area only, sidebar unaffected, double-tap to reset, min 1× max 8×
+
+---
+
+## Milestone 7 — Expand the tool
 - [ ] Colour output mode selector (Mono / Tonal / Palette / RGB / Original)
 - [ ] Blue noise dithering
 - [ ] Line screen / horizontal scan pattern
 - [ ] Second effect (ASCII or halftone as standalone)
-- [ ] MP4 export (MediaRecorder API)
+- [ ] MP4 export — WebCodecs API + mp4-muxer, H.264 output, Instagram compatible
 - [ ] Canvas zoom — pixel-perfect inspection (desktop)
 
 ---
 
-## Milestone 7 — Platform
+## Milestone 8 — Platform
 - [ ] Effect combinator
 - [ ] Preset saves / named looks
 - [ ] Side-by-side before/after view

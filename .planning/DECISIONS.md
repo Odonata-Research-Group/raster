@@ -105,3 +105,39 @@
 - Android: downloads go to Downloads folder
 - Resolution: mention in Instagram caption/bio to set expectations
 - Native app wrapper (React Native) would be required — out of scope
+
+## GIF export fix (V2.5, shipped)
+- Root cause: gif.js spawns a Web Worker using the `workerScript` URL; browsers block cross-origin worker scripts (CORS)
+- Fix: fetch gif.worker.js once as a regular HTTP request, wrap in a Blob, pass `blob://` URL as `workerScript` — Workers can always load from blob URLs
+- Worker URL cached in `gifWorkerUrl` variable — fetch only happens once per session
+- For camera GIF capture: worker is pre-fetched before the 3-second recording window starts, so encoding fires immediately when recording ends
+
+## SVG export (V2.5, shipped)
+- Approach: rect-per-pixel at dithered resolution — one `<rect x y width height />` per ink pixel
+- viewBox set to dithered dimensions (e.g. 400×300 at Scale 2 on an 800×600 image) — infinitely scalable
+- `shape-rendering="crispEdges"` — keeps output pixel-sharp at any zoom in Figma/Illustrator
+- Paper colour fills a background rect; ink colour fills all dot rects — both respect current Colour controls
+- Resolution cap: if dithered pixel count exceeds 640,000, user is warned before generating — at that size files exceed ~18MB
+- Use case: screen printing, laser cutting, editorial, merch — any context requiring scalable bitmap art
+- Decided against path-tracing (merging adjacent rects into paths) — different project, not needed for intended use
+
+## Favicon (V2.5, shipped)
+- User-supplied 32×32 image (black cat on white circle), JPEG encoded
+- Injected at runtime via JS: image loaded into a canvas, clipped to a circle path, exported as PNG data URI, appended as `<link rel="icon">` to `<head>`
+- Circle clip removes JPEG background square — transparent corners, clean circle in browser tab
+- No external favicon file — entirely self-contained in index.html
+
+## Analytics — Plausible (V2.5, shipped)
+- Plausible chosen over Umami (Umami cloud email verification failed) and Google Analytics (too heavy, cookie-based)
+- Plausible: open source, privacy-respecting, no cookies, GDPR compliant, no consent banner required
+- Script injected in `<head>` — page views and referrers tracked automatically
+- Custom events fire on all four download buttons: `Download PNG`, `Download JPG`, `Download GIF`, `Download SVG`
+- Four goals configured in Plausible dashboard to match event names exactly
+- Goal: measure Instagram → floydsteinberg.art → download funnel
+
+## MP4 export (decided against for V2, backlog for V3)
+- Instagram does not accept GIF uploads — MP4 is the correct format for video content
+- Browser-native path (canvas.captureStream → MediaRecorder) outputs WebM, not MP4 — Instagram incompatible
+- Correct approach: WebCodecs API (VideoEncoder) + mp4-muxer library — outputs real H.264 MP4, no heavy dependencies
+- Decided against for V2: meaningful implementation effort, full session's work, not a quick add
+- Backlog as named V3 item: "MP4 export via WebCodecs + mp4-muxer"

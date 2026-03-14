@@ -119,30 +119,36 @@
 
 ---
 
-## V2.5 (Next)
+## V2.5 (Shipped)
 
 ### Bug fixes
-- [ ] GIF encoder — broken on desktop and mobile, needs console investigation and fix
-  - Suspected: gif.worker.js CORS issue with CDN-loaded worker script
+- [x] GIF encoder fixed — gif.worker.js fetched as blob URL to resolve CORS block on CDN-loaded worker script
 
 ### Export
-- [ ] SVG export — dithered canvas traced to SVG rects, respects ink/paper colours
-- [ ] Favicon — dithered bitmap mark, 32×32px PNG, added to `<head>`
+- [x] SVG export — rect-per-pixel at dithered resolution, respects ink/paper colours, resolution warning above 640k pixels, works in Figma/Illustrator
+- [x] Favicon — user-supplied image, circle-clipped at runtime, injected as PNG data URI into `<head>`
 
 ### Analytics
-- [ ] Umami installed — script tag in `<head>` (Nick to set up account first)
-- [ ] Custom events: PNG download, JPG download, GIF download, SVG download
-- [ ] Goal: measure Instagram → floydsteinberg.art → download funnel
+- [x] Plausible installed — script tag in `<head>`, privacy-respecting, no cookies, GDPR compliant
+- [x] Custom events: PNG download, JPG download, GIF download, SVG download
+- [x] Four goals configured in Plausible dashboard
+- [x] Goal: measure Instagram → floydsteinberg.art → download funnel
+
+---
+
+## V2.6 (Next)
 
 ### Mobile
-- [ ] Canvas pinch-to-zoom — canvas area only, sidebar unaffected, double-tap to reset
+- [ ] Canvas pinch-to-zoom — canvas area only, sidebar unaffected, double-tap to reset, min 1× max 8×
+  - Implementation: CSS `touch-action: none` on `.canvas-wrap` + JS pointer event handling
+  - Zoom is a CSS transform on canvas only — does not trigger re-render
 
 ---
 
 ## V3
 
 ### Export
-- [ ] MP4 export (MediaRecorder API)
+- [ ] MP4 export — WebCodecs API (VideoEncoder) + mp4-muxer, outputs H.264 MP4 compatible with Instagram
 
 ### Colour
 - [ ] Colour output mode selector (Mono / Tonal / Palette / RGB / Original)
