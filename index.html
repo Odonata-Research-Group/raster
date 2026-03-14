@@ -10,13 +10,6 @@
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js"></script>
 
-  <!-- Privacy-friendly analytics by Plausible -->
-  <script async src="https://plausible.io/js/pa-uis0LYs-GHMFAdhCPX512.js"></script>
-  <script>
-    window.plausible=window.plausible||function(){(plausible.q=plausible.q||[]).push(arguments)},plausible.init=plausible.init||function(i){plausible.o=i||{}};
-    plausible.init()
-  </script>
-
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -115,6 +108,7 @@
       background: var(--bg);
       overflow: hidden;
       border-right: 1px solid var(--border);
+      touch-action: none;
     }
 
     #canvas {
@@ -638,6 +632,57 @@
 
     .processing.show { opacity: 1; }
 
+    /* ── ZOOM INDICATOR ── */
+    .zoom-indicator {
+      position: absolute;
+      bottom: 12px;
+      right: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      padding: 0 8px;
+      height: 28px;
+      font-family: var(--font);
+      z-index: 10;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.15s;
+    }
+
+    .zoom-indicator.visible {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .zoom-btn {
+      background: transparent;
+      border: none;
+      color: var(--fg);
+      font-family: var(--font);
+      font-size: 16px;
+      line-height: 1;
+      cursor: pointer;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      transition: color 0.1s;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    .zoom-btn:disabled { color: var(--border); cursor: not-allowed; }
+    .zoom-btn:not(:disabled):hover { color: var(--fg); }
+
+    .zoom-val {
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      color: var(--fg);
+      min-width: 38px;
+      text-align: center;
+    }
+
     /* ── MOBILE ── */
     @media (max-width: 480px) {
 
@@ -720,6 +765,9 @@
       .btn   { font-size: 12px; }
       select { font-size: 12px; }
 
+      /* Theme toggle — match param label size */
+      .theme-toggle { font-size: 12px; }
+
       /* Colour labels */
       .colour-label { font-size: 12px; font-weight: 400; letter-spacing: 0.1em; }
       .colour-hex   { font-size: 12px; }
@@ -780,6 +828,12 @@
       </div>
 
       <div class="processing" id="processing">Processing…</div>
+
+      <div class="zoom-indicator" id="zoomIndicator">
+        <button class="zoom-btn" id="zoomOut" aria-label="Zoom out">−</button>
+        <span class="zoom-val" id="zoomVal">100%</span>
+        <button class="zoom-btn" id="zoomIn" aria-label="Zoom in">+</button>
+      </div>
     </div>
 
     <!-- SIDEBAR -->
@@ -907,7 +961,6 @@
         <button class="btn export-btn" id="btnPNG" disabled>↓ PNG</button>
         <button class="btn export-btn" id="btnJPG" disabled>↓ JPG</button>
         <button class="btn export-btn" id="btnGIF" disabled>↓ GIF</button>
-        <button class="btn export-btn" id="btnSVG" disabled>↓ SVG</button>
       </div>
 
       <!-- FOOTER LINKS -->
@@ -981,6 +1034,10 @@ const state = {
   frameH: 0,
   gifRecording: false,
   gifFrames: [],
+  // Zoom / pan (CSS transform only — never touches render pipeline)
+  zoom: 1,
+  panX: 0,
+  panY: 0,
 };
 
 // ── Elements
@@ -997,7 +1054,6 @@ const btnClear   = document.getElementById('btnClear');
 const btnPNG     = document.getElementById('btnPNG');
 const btnJPG     = document.getElementById('btnJPG');
 const btnGIF     = document.getElementById('btnGIF');
-const btnSVG     = document.getElementById('btnSVG');
 
 const selPattern    = document.getElementById('selPattern');
 const sldScale      = document.getElementById('sldScale');
@@ -1381,6 +1437,7 @@ function clearAll() {
   state.mode   = 'idle';
   canvas.width  = 0;
   canvas.height = 0;
+  resetZoom();
   dropZone.classList.remove('hidden');
   setHasImage(false);
   updateStatus();
@@ -1392,7 +1449,7 @@ function setHasImage(has) {
   btnPNG.disabled   = !has;
   btnJPG.disabled   = !has;
   btnGIF.disabled   = !has;
-  btnSVG.disabled   = !has;
+  zoomIndicator.classList.toggle('visible', has);
 }
 
 function showProcessing() { processing.classList.add('show'); }
@@ -1410,22 +1467,6 @@ function updateStatus() {
   }
 }
 
-// ── GIF worker — fetch once, cache as blob URL to avoid CORS block
-let gifWorkerUrl = null;
-
-async function getGifWorkerUrl() {
-  if (gifWorkerUrl) return gifWorkerUrl;
-  try {
-    const res  = await fetch('https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js');
-    const blob = await res.blob();
-    gifWorkerUrl = URL.createObjectURL(blob);
-    return gifWorkerUrl;
-  } catch (e) {
-    console.warn('gif.worker fetch failed, falling back to CDN direct:', e);
-    return 'https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js';
-  }
-}
-
 // ── GIF export
 function downloadGIF() {
   if (state.mode === 'camera') {
@@ -1435,16 +1476,15 @@ function downloadGIF() {
   }
 }
 
-async function exportGIFStill() {
+function exportGIFStill() {
   btnGIF.textContent = '… Encoding';
   btnGIF.disabled = true;
-  const workerScript = await getGifWorkerUrl();
   const gif = new GIF({
     workers: 2,
     quality: 10,
     width: canvas.width,
     height: canvas.height,
-    workerScript,
+    workerScript: 'https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js',
   });
   gif.addFrame(canvas, { delay: 100, copy: true });
   gif.on('finished', (blob) => {
@@ -1460,16 +1500,13 @@ async function exportGIFStill() {
   gif.render();
 }
 
-async function startGIFCapture() {
+function startGIFCapture() {
   if (state.gifRecording) return;
   state.gifRecording = true;
   state.gifFrames    = [];
   btnGIF.textContent = '● Rec 3s';
   btnGIF.classList.add('active');
   btnGIF.disabled = true;
-
-  // Pre-fetch worker before the 3s recording window so encoding starts immediately
-  const workerScript = await getGifWorkerUrl();
 
   setTimeout(() => {
     state.gifRecording = false;
@@ -1488,7 +1525,7 @@ async function startGIFCapture() {
       quality: 10,
       width: frames[0].width,
       height: frames[0].height,
-      workerScript,
+      workerScript: 'https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js',
     });
 
     const delay = Math.round(3000 / frames.length);
@@ -1616,74 +1653,10 @@ btnCamera.addEventListener('click', () => {
 
 btnClear.addEventListener('click', clearAll);
 
-// ── SVG export
-function exportSVG() {
-  const w = canvas.width;
-  const h = canvas.height;
-  if (!w || !h) return;
-
-  // Work at dithered resolution (canvas is scaled up from dither output)
-  const dw = Math.ceil(w / state.scale);
-  const dh = Math.ceil(h / state.scale);
-
-  // Warn if output will be large
-  if (dw * dh > 640000) {
-    const ok = confirm(`SVG will contain ${(dw * dh).toLocaleString()} rectangles at this scale — file may be large. Continue?`);
-    if (!ok) return;
-  }
-
-  // Read pixel data from the displayed canvas
-  const imageData = ctx.getImageData(0, 0, w, h);
-  const px = imageData.data;
-
-  // Ink colour as rgb values for comparison (allow ±2 tolerance for JPEG artefacts)
-  const ink = hexToRgb(state.inkColor);
-
-  const rects = [];
-  const rectSize = state.scale;
-
-  for (let dy = 0; dy < dh; dy++) {
-    for (let dx = 0; dx < dw; dx++) {
-      // Sample the centre of each scaled cell in the displayed canvas
-      const sx = Math.min(Math.floor(dx * rectSize + rectSize / 2), w - 1);
-      const sy = Math.min(Math.floor(dy * rectSize + rectSize / 2), h - 1);
-      const i  = (sy * w + sx) * 4;
-      const r  = px[i], g = px[i+1], b = px[i+2];
-
-      // If this pixel matches ink colour, emit a rect
-      const isInk = Math.abs(r - ink[0]) < 8 &&
-                    Math.abs(g - ink[1]) < 8 &&
-                    Math.abs(b - ink[2]) < 8;
-
-      if (isInk) {
-        rects.push(`<rect x="${dx}" y="${dy}" width="1" height="1"/>`);
-      }
-    }
-  }
-
-  const svgContent = [
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${dw} ${dh}" shape-rendering="crispEdges">`,
-    `<rect width="${dw}" height="${dh}" fill="${state.paperColor}"/>`,
-    `<g fill="${state.inkColor}">`,
-    rects.join('\n'),
-    `</g>`,
-    `</svg>`
-  ].join('\n');
-
-  const blob = new Blob([svgContent], { type: 'image/svg+xml' });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.download = `floydsteinberg-${Date.now()}.svg`;
-  a.href     = url;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
 // ── Events: export
-btnPNG.addEventListener('click', () => { plausible('Download PNG'); downloadCanvas('png'); });
-btnJPG.addEventListener('click', () => { plausible('Download JPG'); downloadCanvas('jpg', 0.92); });
-btnGIF.addEventListener('click', () => { plausible('Download GIF'); downloadGIF(); });
-btnSVG.addEventListener('click', () => { plausible('Download SVG'); exportSVG(); });
+btnPNG.addEventListener('click', () => downloadCanvas('png'));
+btnJPG.addEventListener('click', () => downloadCanvas('jpg', 0.92));
+btnGIF.addEventListener('click', downloadGIF);
 
 // ── Events: drag & drop
 const wrap = document.getElementById('canvasWrap');
@@ -1740,33 +1713,143 @@ modalClose.addEventListener('click', closeModal);
 modalOverlay.addEventListener('click', (e) => { if (e.target === modalOverlay) closeModal(); });
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
 
-// ── Favicon — circle-clipped, generated at runtime
-function generateFavicon() {
-  const SIZE = 32;
-  const fc   = document.createElement('canvas');
-  fc.width   = SIZE;
-  fc.height  = SIZE;
-  const fCtx = fc.getContext('2d');
+// ── Zoom / Pan
+const zoomIndicator = document.getElementById('zoomIndicator');
+const zoomOut       = document.getElementById('zoomOut');
+const zoomIn        = document.getElementById('zoomIn');
+const zoomVal       = document.getElementById('zoomVal');
 
-  const img  = new Image();
-  img.onload = () => {
-    // Clip to circle
-    fCtx.beginPath();
-    fCtx.arc(SIZE / 2, SIZE / 2, SIZE / 2, 0, Math.PI * 2);
-    fCtx.clip();
-    fCtx.drawImage(img, 0, 0, SIZE, SIZE);
+const zs = {
+  pointers:  new Map(),  // pointerId → {x, y}
+  lastDist:  0,
+  lastMidX:  0,
+  lastMidY:  0,
+  tapCount:  0,
+  tapTimer:  null,
+};
 
-    const link = document.createElement('link');
-    link.rel   = 'icon';
-    link.type  = 'image/png';
-    link.href  = fc.toDataURL('image/png');
-    document.head.appendChild(link);
-  };
-  img.src = 'data:image/jpeg;base64,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';
+function applyZoom() {
+  canvas.style.transform = `translate(${state.panX}px, ${state.panY}px) scale(${state.zoom})`;
+  zoomVal.textContent = `${Math.round(state.zoom * 100)}%`;
+  zoomOut.disabled = state.zoom <= 0.5;
+  zoomIn.disabled  = state.zoom >= 8;
 }
 
+function resetZoom() {
+  state.zoom = 1;
+  state.panX = 0;
+  state.panY = 0;
+  applyZoom();
+}
+
+function stepZoom(dir) {
+  // Zoom toward canvas centre — pan unchanged (midpoint = wrap centre)
+  state.zoom = parseFloat(Math.min(8, Math.max(0.5, state.zoom + dir * 0.25)).toFixed(2));
+  // Clamp pan so canvas doesn't disappear off-screen at new zoom
+  clampPan();
+  applyZoom();
+}
+
+function clampPan() {
+  if (state.zoom <= 0.5) { state.panX = 0; state.panY = 0; return; }
+  const wrap = document.getElementById('canvasWrap');
+  const maxPanX = (wrap.clientWidth  * (state.zoom - 1)) / 2;
+  const maxPanY = (wrap.clientHeight * (state.zoom - 1)) / 2;
+  state.panX = Math.max(-maxPanX, Math.min(maxPanX, state.panX));
+  state.panY = Math.max(-maxPanY, Math.min(maxPanY, state.panY));
+}
+
+// Pointer events — pinch to zoom + one-finger pan
+const canvasWrap = document.getElementById('canvasWrap');
+
+canvasWrap.addEventListener('pointerdown', (e) => {
+  // Don't intercept clicks on the drop zone or zoom buttons
+  if (e.target === zoomOut || e.target === zoomIn) return;
+  e.preventDefault();
+  zs.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+  if (zs.pointers.size === 2) {
+    const pts = [...zs.pointers.values()];
+    zs.lastDist = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
+    zs.lastMidX = (pts[0].x + pts[1].x) / 2;
+    zs.lastMidY = (pts[0].y + pts[1].y) / 2;
+  }
+
+  // Double-tap → reset zoom
+  if (zs.pointers.size === 1) {
+    zs.tapCount++;
+    if (zs.tapCount === 1) {
+      zs.tapTimer = setTimeout(() => { zs.tapCount = 0; }, 300);
+    } else if (zs.tapCount >= 2) {
+      clearTimeout(zs.tapTimer);
+      zs.tapCount = 0;
+      resetZoom();
+    }
+  }
+});
+
+canvasWrap.addEventListener('pointermove', (e) => {
+  if (!zs.pointers.has(e.pointerId)) return;
+
+  const prev = { ...zs.pointers.get(e.pointerId) };
+  zs.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+  if (zs.pointers.size === 2) {
+    const pts      = [...zs.pointers.values()];
+    const dist     = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
+    const midX     = (pts[0].x + pts[1].x) / 2;
+    const midY     = (pts[0].y + pts[1].y) / 2;
+    const rect     = canvasWrap.getBoundingClientRect();
+    const relMidX  = midX - rect.left;
+    const relMidY  = midY - rect.top;
+    const wW       = rect.width;
+    const wH       = rect.height;
+
+    if (zs.lastDist > 0) {
+      const delta   = dist / zs.lastDist;
+      const newZoom = Math.min(8, Math.max(0.5, state.zoom * delta));
+
+      // Adjust pan so the pinch midpoint stays fixed on canvas
+      state.panX += (relMidX - wW / 2) * (1 - newZoom / state.zoom);
+      state.panY += (relMidY - wH / 2) * (1 - newZoom / state.zoom);
+
+      // Pan from midpoint movement between frames
+      state.panX += midX - zs.lastMidX;
+      state.panY += midY - zs.lastMidY;
+
+      state.zoom = newZoom;
+    }
+
+    zs.lastDist = dist;
+    zs.lastMidX = midX;
+    zs.lastMidY = midY;
+    clampPan();
+    applyZoom();
+
+  } else if (zs.pointers.size === 1 && state.zoom > 1) {
+    // Single-finger pan when zoomed in
+    state.panX += e.clientX - prev.x;
+    state.panY += e.clientY - prev.y;
+    clampPan();
+    applyZoom();
+  }
+});
+
+function onPointerUp(e) {
+  zs.pointers.delete(e.pointerId);
+  if (zs.pointers.size < 2) zs.lastDist = 0;
+  // Snap back to 1× if somehow drifted below minimum
+  if (state.zoom <= 0.5) resetZoom();
+}
+
+canvasWrap.addEventListener('pointerup',     onPointerUp);
+canvasWrap.addEventListener('pointercancel', onPointerUp);
+
+// Zoom buttons
+zoomOut.addEventListener('click', () => stepZoom(-1));
+zoomIn.addEventListener('click',  () => stepZoom(+1));
+
 // ── Init
-generateFavicon();
 updateStatus();
 </script>
 </body>
