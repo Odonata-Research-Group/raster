@@ -166,15 +166,7 @@
     .sidebar::-webkit-scrollbar-track { background: transparent; }
     .sidebar::-webkit-scrollbar-thumb { background: var(--border); }
 
-    /* ── Export button prominence ── */
-    .export-btn {
-      border-color: var(--mid);
-    }
-
-    .export-btn:not(:disabled):hover {
-      border-color: var(--fg);
-      background: rgba(255,255,255,0.04);
-    }
+    /* Export buttons use the same border as all other buttons — no special treatment */
 
     /* ── CONTROL GROUPS ── */
     .group-label {
@@ -690,9 +682,9 @@
 
       /* ── BOTTOM PADDING ── */
       /* env(safe-area-inset-bottom) handles iOS home indicator;
-         fallback 32px for Android / older browsers */
-      .sidebar        { padding-bottom: max(env(safe-area-inset-bottom, 0px), 32px); }
-      .sidebar-footer { padding-bottom: 32px; }
+         80px fallback clears browser chrome on Android / older browsers */
+      .sidebar        { padding-bottom: max(calc(env(safe-area-inset-bottom, 0px) + 80px), 80px); }
+      .sidebar-footer { padding-bottom: 48px; }
     }
 
   </style>
