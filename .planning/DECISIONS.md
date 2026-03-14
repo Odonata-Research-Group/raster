@@ -49,4 +49,59 @@
 - Mode selector (Mono / Tonal / Palette / RGB / Original) — still V3, not this session
 
 ## Light / Dark mode (V2.2, shipped)
-- CSS variable swap on html e
+- CSS variable swap on html element — single class toggle, no JS logic
+- Dark default: `--bg: #000000`, `--fg: #ffffff`
+- Light mode: `--bg: #ffffff`, `--fg: #000000`
+- Theme toggle in header — label updates between "Light" and "Dark"
+
+## Mobile layout (V2.4, shipped)
+- Breakpoint: `@media (max-width: 480px)`
+- Layout decision: canvas locked at top 50vh, sidebar scrolls below — canvas always in viewport regardless of scroll position
+- Rationale: tool feedback is immediate — user adjusts controls and sees result without scrolling back up
+- `main` switches from `grid-template-columns: 1fr 200px` to `grid-template-rows: 50vh 1fr`
+- Canvas gets `border-bottom` instead of `border-right` on mobile
+- `100dvh` replaces `100vh` on mobile — dynamic viewport height accounts for browser chrome so status bar is always visible
+- CSS-only solution — no JS layout switching
+
+## Mobile typography (V2.4, shipped)
+- All type sizes bumped within `@media (max-width: 480px)` — no changes to desktop
+- Group labels: 10px → 13px
+- Param labels: 9px light → 12px regular (weight bump from 300 to 400)
+- Param values: 11px → 13px
+- Buttons and selects: 10px → 12px
+- Status bar: 9px → 12px
+- Footer links: 9px → 11px
+- Toggle labels: 9px light → 12px regular
+- Rationale: 9px at arm's length on a phone is not legible — minimum comfortable reading size on mobile is 12px
+
+## Mobile touch targets (V2.4, shipped)
+- `--control-h` bumped from 36px to 44px on mobile (buttons, selects)
+- Slider thumbs: 10×10px → 20×20px
+- Toggle: 28×14px → 36×18px
+- Apple HIG minimum touch target is 44px — applied throughout
+
+## Mobile UX details (V2.4, shipped)
+- Drop zone label: "DROP IMAGE / CLICK TO UPLOAD" on desktop, "TAP TO UPLOAD" on mobile — implemented as two elements, CSS toggles visibility
+- Status bar right side (live badge, domain) hidden on mobile — avoids collision with dims/effect text
+- Footer link arrows always visible on mobile — hover state doesn't exist on touch
+- Bottom padding: `env(safe-area-inset-bottom) + 80px` — clears iOS home indicator and browser chrome so footer links are always reachable
+
+## Export buttons (V2.4, shipped)
+- Hierarchy decision: ghost buttons for all inputs and controls, solid buttons for export actions — output is the primary action
+- Dark mode: disabled = ghost (transparent, `var(--border)` stroke, no hover), enabled = solid `#ffffff` with black text, hover = `rgba(255,255,255,0.8)`
+- Light mode: disabled = ghost (transparent, `var(--border)` stroke), enabled = solid `#000000` with white text, hover = `rgba(0,0,0,0.8)`
+- `opacity: 1` override on both states — prevents base `.btn:disabled { opacity: 0.3 }` from making disabled state look broken rather than intentional
+- Specificity fix: `.btn.export-btn` — `.export-btn` alone was being overridden by the later `.btn` declaration
+
+## Sidebar background (V2.4, shipped)
+- Dark mode: `#111111` — separates tool panel from pure black canvas without adding colour
+- Light mode: `#f5f5f5` — subtle off-white panel, distinct from white canvas
+- Rationale: canvas = output space, sidebar = tool space — visual separation makes the interface feel more intentional
+- Hardcoded values rather than CSS variables — `var(--dim)` was `#222222` (too light in dark mode) and `#eeeeee` (too similar to white in light mode)
+
+## Camera roll export (decided against, V2.4)
+- Not possible from a browser-based tool — platform restriction on both iOS and Android
+- iOS: downloads go to Files app only; Photos requires native app or Share Sheet
+- Android: downloads go to Downloads folder
+- Resolution: mention in Instagram caption/bio to set expectations
+- Native app wrapper (React Native) would be required — out of scope
