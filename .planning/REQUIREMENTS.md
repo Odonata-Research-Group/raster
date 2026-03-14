@@ -136,12 +136,45 @@
 
 ---
 
-## V2.6 (Next)
+## V2.6 (Shipped)
 
-### Mobile
-- [ ] Canvas pinch-to-zoom — canvas area only, sidebar unaffected, double-tap to reset, min 1× max 8×
-  - Implementation: CSS `touch-action: none` on `.canvas-wrap` + JS pointer event handling
-  - Zoom is a CSS transform on canvas only — does not trigger re-render
+### Canvas zoom
+- [x] Pinch-to-zoom on canvas area only — sidebar completely unaffected
+- [x] `touch-action: none` on `.canvas-wrap` — intercepts pointer events, prevents browser native zoom
+- [x] Zoom is CSS transform only — never triggers re-render
+- [x] Single-finger pan when zoomed in
+- [x] Double-tap to reset to 1× (100%)
+- [x] Zoom range: 0.5× (50%) to 8× (800%)
+- [x] Step size: 0.25× (25%) per button tap
+
+### Zoom indicator
+- [x] `− 100% +` widget, bottom-right of canvas area, always visible when image loaded
+- [x] `−` dims at 50% minimum, `+` dims at 800% maximum
+- [x] Resets to 100% on double-tap and on clear
+
+### Bug fixes
+- [x] About modal body text — was `var(--mid)` (#555555), fixed to `var(--fg)` — readable in both modes
+- [x] Theme toggle label — bumped to 12px on mobile, now consistent with param labels
+
+---
+
+## V2.7 (Next)
+
+### Presets
+- [ ] 5 named one-tap presets — positioned below Input, above Effect
+- [ ] Preset group uses standard `.btn` style — no new UI patterns
+- [ ] Active state: `.active` class on selected preset, clears on any manual slider adjustment
+- [ ] Starting set: Newsprint, Zine, Glitch, Lo-Fi, Raw
+
+---
+
+## V2.8
+
+### UI
+- [ ] Collapsible sidebar sections — `+` / `−` toggle at far right of each group label
+- [ ] All sections open by default
+- [ ] Collapsed state persists via localStorage
+- [ ] Dithered modal background — canvas-generated Bayer pattern behind About text
 
 ---
 
@@ -149,6 +182,7 @@
 
 ### Export
 - [ ] MP4 export — WebCodecs API (VideoEncoder) + mp4-muxer, outputs H.264 MP4 compatible with Instagram
+- [ ] Gallery / settings share — export image with current settings baked in, or URL-encoded state for sharing exact recipes
 
 ### Colour
 - [ ] Colour output mode selector (Mono / Tonal / Palette / RGB / Original)
@@ -164,7 +198,6 @@
 - Line screen / horizontal scan pattern
 - Vertical bar dither pattern
 - Canvas zoom — pixel-perfect inspection (desktop)
-- Preset saves / named looks
 - Second effect (ASCII or halftone as standalone)
 - Effect combinator
 - HTML export

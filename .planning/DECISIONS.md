@@ -72,6 +72,7 @@
 - Status bar: 9px → 12px
 - Footer links: 9px → 11px
 - Toggle labels: 9px light → 12px regular
+- Theme toggle: 10px → 12px (V2.6 fix — was visibly smaller than param labels on mobile)
 - Rationale: 9px at arm's length on a phone is not legible — minimum comfortable reading size on mobile is 12px
 
 ## Mobile touch targets (V2.4, shipped)
@@ -134,6 +135,55 @@
 - Custom events fire on all four download buttons: `Download PNG`, `Download JPG`, `Download GIF`, `Download SVG`
 - Four goals configured in Plausible dashboard to match event names exactly
 - Goal: measure Instagram → floydsteinberg.art → download funnel
+
+## Canvas pinch-to-zoom (V2.6, shipped)
+- Zoom is a CSS transform only — never touches the render pipeline or re-renders the canvas
+- `touch-action: none` on `.canvas-wrap` — intercepts all pointer events, prevents browser native pinch-zoom
+- Pointer event Map tracks up to 2 simultaneous touches by `pointerId`
+- Two pointers: distance delta drives zoom scale, midpoint delta drives pan — pinch focal point stays fixed on canvas content
+- One pointer (when zoomed in): drags to pan
+- Double-tap within 300ms resets to 1× (100% / fit)
+- Zoom range: 0.5× (50%) to 8× (800%)
+- Step size: 0.25× (25%) per button tap — sequence reads 50% → 75% → 100% → 125% etc.
+- `clampPan()` keeps canvas edge-bound so it cannot be dragged fully off screen
+- Zoom state lives in main `state` object — `clearAll()` resets it cleanly
+
+## Zoom indicator (V2.6, shipped)
+- `− 100% +` widget, absolute positioned bottom-right of `.canvas-wrap`, 12px from each edge
+- Hidden when no image loaded, shown via `.visible` class on `setHasImage(true)`
+- `−` dims when at 50% minimum, `+` dims when at 800% maximum
+- Background `var(--bg)`, 1px border — reads as control, not canvas content
+- Rationale: without it users have no reference for how zoomed in they are; disorienting at 4–8×
+
+## Modal body text (V2.6, fixed)
+- Was `var(--mid)` (#555555 in dark mode) — effectively unreadable against black modal background
+- Fixed to `var(--fg)` — pure white in dark mode, pure black in light mode
+- Modal title was already `var(--fg)` — body now consistent with it
+
+## Presets (decided, V2.7)
+- Sidebar position: below Input group, above Effect group — order follows workflow logic (load → starting point → tune)
+- Implementation: standard `.btn` buttons in a `PRESETS` group — zero new UI patterns introduced
+- Active state: selected preset highlights with `.active` class; clears automatically when user manually adjusts any slider (signals "custom territory")
+- Proposed starting set: Newsprint (Bayer 4×4, Scale 3, high contrast), Zine (Atkinson, Scale 2, pushed threshold), Glitch (Noise, Scale 1, inverted), Lo-Fi (Bayer 8×8, Scale 4, soft contrast), Raw (Floyd-Steinberg, Scale 1, neutral)
+- Rationale: new users need a fast path to a result they're excited about — presets get them there in one tap instead of 3 minutes of slider exploration
+
+## Collapsible sidebar sections (decided, V2.8)
+- All sections open by default — no hidden complexity for new users
+- User can collapse any section via `+` / `−` toggle at far right of group label
+- State persists via localStorage — collapsed sections stay collapsed across sessions
+- Rationale: build this after presets so we're collapsing the final sidebar structure, not an interim one
+- Implementation: `localStorage.setItem('collapsed', JSON.stringify({colour: true, export: true}))` on each toggle, read on init
+
+## Dithered modal background (decided, V2.8 candidate)
+- About modal background to be replaced with a canvas-generated Bayer dither pattern
+- Rationale: makes the About page feel like it belongs to the tool rather than being a generic overlay; strong for Instagram screenshots of the tool itself
+- To be specced properly in V2.8
+
+## Gallery / settings share (backlog, to be specced)
+- Idea: export an image with current settings baked into it — shareable output that communicates how a result was made
+- Could also manifest as a URL-based state share (settings encoded in query params) — load a URL, tool opens with those exact settings applied
+- High value for community/Instagram use case — people can share not just the output but the recipe
+- Needs full spec before building
 
 ## MP4 export (decided against for V2, backlog for V3)
 - Instagram does not accept GIF uploads — MP4 is the correct format for video content

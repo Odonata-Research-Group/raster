@@ -55,25 +55,44 @@
 
 ---
 
-## Milestone 6 — Mobile zoom (next)
-- [ ] Canvas pinch-to-zoom — canvas area only, sidebar unaffected, double-tap to reset, min 1× max 8×
+## Milestone 6 — Mobile zoom ✓
+- [x] Canvas pinch-to-zoom — canvas area only, sidebar unaffected
+- [x] Single-finger pan when zoomed in
+- [x] Double-tap to reset to 1× (100%)
+- [x] Zoom range: 0.5× (50%) to 8× (800%), steps of 25%
+- [x] Zoom indicator — `− 100% +` widget, bottom-right of canvas, always visible when image loaded
+- [x] About modal body text fixed — readable in both light and dark mode
+- [x] Theme toggle label — consistent size with param labels on mobile
 
 ---
 
-## Milestone 7 — Expand the tool
+## Milestone 7 — Presets (next)
+- [ ] 5 named one-tap presets: Newsprint, Zine, Glitch, Lo-Fi, Raw
+- [ ] Positioned below Input, above Effect — follows workflow order
+- [ ] Active state clears on any manual slider adjustment
+
+---
+
+## Milestone 8 — Polish + UI
+- [ ] Collapsible sidebar sections — `+` / `−` per group, state persists via localStorage, all open by default
+- [ ] Dithered modal background — canvas-generated Bayer pattern behind About text
+
+---
+
+## Milestone 9 — Share + expand
+- [ ] Gallery / settings share — export image with settings baked in, or URL-encoded state for sharing exact recipes
+- [ ] MP4 export — WebCodecs API + mp4-muxer, H.264 output, Instagram compatible
 - [ ] Colour output mode selector (Mono / Tonal / Palette / RGB / Original)
+- [ ] Side-by-side before/after view
+
+---
+
+## Milestone 10 — Platform
 - [ ] Blue noise dithering
 - [ ] Line screen / horizontal scan pattern
 - [ ] Second effect (ASCII or halftone as standalone)
-- [ ] MP4 export — WebCodecs API + mp4-muxer, H.264 output, Instagram compatible
-- [ ] Canvas zoom — pixel-perfect inspection (desktop)
-
----
-
-## Milestone 8 — Platform
 - [ ] Effect combinator
-- [ ] Preset saves / named looks
-- [ ] Side-by-side before/after view
+- [ ] Canvas zoom — pixel-perfect inspection (desktop)
 - [ ] Instagram growth tracking
 
 ---

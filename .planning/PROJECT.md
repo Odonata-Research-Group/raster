@@ -6,7 +6,7 @@ Floyd Steinberg is a browser-based image dithering tool. Drop in a photo, apply 
 
 **Live:** https://floydsteinberg.art
 **Instagram:** @floydsteinberg
-**Status:** V2.5 shipped — bitmap dither, camera input, colour output, GIF/PNG/JPG/SVG export, brightness/blur/pixelate/scatter controls, full mobile support, analytics
+**Status:** V2.6 shipped — bitmap dither, camera input, colour output, GIF/PNG/JPG/SVG export, brightness/blur/pixelate/scatter controls, full mobile support, pinch-to-zoom, analytics
 
 ## Why does it exist?
 
@@ -61,3 +61,18 @@ Named after Robert W. Floyd and Louis Steinberg, who published "An Adaptive Algo
 - Analytics: Plausible (privacy-respecting, no cookies, GDPR compliant) — shipped V2.5
 - Four download goals tracked: PNG, JPG, GIF, SVG
 - No paid distribution, no SEO investment — organic only
+
+## Roadmap
+
+### V2.7 (next)
+- Presets — 5 named one-tap starting points (Newsprint, Zine, Glitch, Lo-Fi, Raw), positioned below Input above Effect
+- Goal: get new users to an exciting result in one tap, not 3 minutes of slider exploration
+
+### V2.8
+- Collapsible sidebar sections — all open by default, user can collapse, state persists via localStorage
+- Dithered modal background — canvas-generated Bayer pattern behind About text
+
+### V3
+- Gallery / settings share — export image with settings baked in, or URL-encoded state for sharing exact recipes
+- MP4 export via WebCodecs + mp4-muxer (Instagram-compatible H.264)
+- Mode selector: Mono / Tonal / Palette / RGB / Original
