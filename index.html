@@ -699,6 +699,11 @@
       .footer-link       { font-size: 11px; }
       .footer-link-arrow { opacity: 1; }
 
+      /* Use dynamic viewport height so status bar isn't hidden behind browser chrome */
+      .app {
+        height: 100dvh;
+      }
+
       /* ── BOTTOM PADDING ── */
       /* env(safe-area-inset-bottom) handles iOS home indicator;
          80px fallback clears browser chrome on Android / older browsers */
