@@ -10,6 +10,13 @@
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js"></script>
 
+  <!-- Privacy-friendly analytics by Plausible -->
+  <script async src="https://plausible.io/js/pa-uis0LYs-GHMFAdhCPX512.js"></script>
+  <script>
+    window.plausible=window.plausible||function(){(plausible.q=plausible.q||[]).push(arguments)},plausible.init=plausible.init||function(i){plausible.o=i||{}};
+    plausible.init()
+  </script>
+
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -1673,10 +1680,10 @@ function exportSVG() {
 }
 
 // ── Events: export
-btnPNG.addEventListener('click', () => downloadCanvas('png'));
-btnJPG.addEventListener('click', () => downloadCanvas('jpg', 0.92));
-btnGIF.addEventListener('click', downloadGIF);
-btnSVG.addEventListener('click', exportSVG);
+btnPNG.addEventListener('click', () => { plausible('Download PNG'); downloadCanvas('png'); });
+btnJPG.addEventListener('click', () => { plausible('Download JPG'); downloadCanvas('jpg', 0.92); });
+btnGIF.addEventListener('click', () => { plausible('Download GIF'); downloadGIF(); });
+btnSVG.addEventListener('click', () => { plausible('Download SVG'); exportSVG(); });
 
 // ── Events: drag & drop
 const wrap = document.getElementById('canvasWrap');
