@@ -166,7 +166,26 @@
     .sidebar::-webkit-scrollbar-track { background: transparent; }
     .sidebar::-webkit-scrollbar-thumb { background: var(--border); }
 
-    /* Export buttons use the same border as all other buttons — no special treatment */
+    /* ── Export buttons — ghost when disabled, solid white when enabled ── */
+    .btn.export-btn:disabled {
+      background: transparent;
+      border-color: var(--border);
+      color: var(--fg);
+      opacity: 1;
+    }
+
+    .btn.export-btn:not(:disabled) {
+      background: #ffffff;
+      border-color: #ffffff;
+      color: #000000;
+      opacity: 1;
+    }
+
+    .btn.export-btn:not(:disabled):hover {
+      background: rgba(255,255,255,0.8);
+      border-color: rgba(255,255,255,0.8);
+      color: #000000;
+    }
 
     /* ── CONTROL GROUPS ── */
     .group-label {
