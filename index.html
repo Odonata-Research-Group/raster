@@ -642,6 +642,13 @@
 
     .footer-link:hover .footer-link-arrow { opacity: 1; }
 
+    /* ── PARAM DISABLED ── */
+    .param.param-disabled {
+      opacity: 0.35;
+      pointer-events: none;
+      user-select: none;
+    }
+
     /* ── LOADING ── */
     .processing {
       position: absolute;
@@ -902,6 +909,9 @@
               <option value="noise">Noise</option>
               <option value="floyd">Floyd-Steinberg</option>
               <option value="atkinson">Atkinson</option>
+              <option value="jarvis">Jarvis-Judice-Ninke</option>
+              <option value="stucki">Stucki</option>
+              <option value="ostromoukhov">Ostromoukhov</option>
             </select>
           </div>
 
@@ -959,6 +969,22 @@
               <span class="param-val" id="valScatter">0</span>
             </div>
             <input type="range" id="sldScatter" min="0" max="5" value="0" step="1" />
+          </div>
+
+          <div class="param param-disabled" id="paramDotSize">
+            <div class="param-header">
+              <span class="param-name">Dot Size</span>
+              <span class="param-val" id="valDotSize">6</span>
+            </div>
+            <input type="range" id="sldDotSize" min="2" max="20" value="6" step="1" />
+          </div>
+
+          <div class="param param-disabled" id="paramScreenAngle">
+            <div class="param-header">
+              <span class="param-name">Screen Angle</span>
+              <span class="param-val" id="valScreenAngle">45°</span>
+            </div>
+            <input type="range" id="sldScreenAngle" min="0" max="90" value="45" step="1" />
           </div>
 
           <div class="toggle-row">
@@ -1070,6 +1096,8 @@ const state = {
   blur: 0,
   pixelate: 1,
   scatter: 0,
+  dotSize: 6,
+  screenAngle: 45,
   pattern: 'bayer4',
   inkColor: '#ffffff',
   paperColor: '#000000',
@@ -1118,6 +1146,12 @@ const valBlur       = document.getElementById('valBlur');
 const valPixelate   = document.getElementById('valPixelate');
 const valScatter    = document.getElementById('valScatter');
 const togInvert     = document.getElementById('togInvert');
+const sldDotSize      = document.getElementById('sldDotSize');
+const sldScreenAngle  = document.getElementById('sldScreenAngle');
+const valDotSize      = document.getElementById('valDotSize');
+const valScreenAngle  = document.getElementById('valScreenAngle');
+const paramDotSize    = document.getElementById('paramDotSize');
+const paramScreenAngle = document.getElementById('paramScreenAngle');
 const pickerInk   = document.getElementById('pickerInk');
 const pickerPaper = document.getElementById('pickerPaper');
 const swatchInk   = document.getElementById('swatchInk');
@@ -1161,6 +1195,34 @@ const BAYER = {
     return m;
   })(),
 };
+
+// ── Ostromoukhov (2001) luminance-indexed error diffusion table
+// Each entry [c1, c2, c3]: right, below-left, below neighbour weights
+const OSTROMOUKHOV_TABLE = (() => {
+  // Dark region 0–47: precise weights from paper
+  const dark = [
+    [13,0,5],[13,0,5],[21,0,10],[7,0,4],[8,0,5],[47,3,28],[23,3,13],[15,3,8],
+    [22,6,11],[43,15,20],[7,3,3],[501,224,211],[249,116,103],[165,80,67],
+    [123,62,49],[489,256,191],[81,45,32],[30,17,11],[109,65,40],[12,7,4],
+    [283,173,100],[109,68,37],[15,10,5],[1515,1024,509],[200,138,62],
+    [1003,712,285],[68,50,18],[723,542,185],[493,378,121],[63,50,14],
+    [195,159,38],[1253,1042,211],[228,193,35],[534,458,76],[15,13,2],
+    [555,490,65],[601,541,60],[333,305,28],[257,239,18],[511,481,30],
+    [768,724,44],[73,69,4],[3537,3367,170],[273,261,12],[1096,1051,45],
+    [555,535,20],[20,19,1],[20,19,1]
+  ];
+  const t = new Array(256);
+  // 0–47: dark
+  for (let i = 0; i < 48; i++) t[i] = dark[i];
+  // 48–207: mid-tone — alternating equal right/below-left, minimal below
+  for (let i = 48; i < 208; i++) t[i] = i % 2 === 0 ? [1,1,0] : [0,1,0];
+  // 208–255: mirror of dark with right ↔ below-left swapped
+  for (let i = 208; i < 256; i++) {
+    const [c1,c2,c3] = dark[255 - i];
+    t[i] = [c2, c1, c3];
+  }
+  return t;
+})();
 
 // ── Colour helpers
 function hexToRgb(hex) {
@@ -1273,7 +1335,203 @@ function dither(imageData, w, h) {
     return { imageData: out, ow, oh };
   }
 
-  // ── Ordered dither (Bayer, Halftone, Noise)
+  // ── AM Halftone — rotated dot grid, luminance-driven dot size
+  if (pattern === 'halftone') {
+    const cs   = state.dotSize;
+    const ang  = state.screenAngle * Math.PI / 180;
+    const cosA = Math.cos(ang);
+    const sinA = Math.sin(ang);
+
+    for (let py = 0; py < oh; py++) {
+      for (let px = 0; px < ow; px++) {
+        // Rotate pixel into grid space
+        const u = px * cosA + py * sinA;
+        const v = -px * sinA + py * cosA;
+
+        // Nearest cell centre in grid space
+        const ci = Math.floor(u / cs);
+        const cj = Math.floor(v / cs);
+        const cu = (ci + 0.5) * cs;
+        const cv = (cj + 0.5) * cs;
+
+        // Cell centre back in source (w×h) image space for sampling
+        const icx = cu * cosA - cv * sinA;
+        const icy = cu * sinA + cv * cosA;
+        const sx  = Math.max(0, Math.min(w - 1, Math.round(icx * scale)));
+        const sy  = Math.max(0, Math.min(h - 1, Math.round(icy * scale)));
+        const si  = (sy * w + sx) * 4;
+
+        let lum = 0.299 * src[si] + 0.587 * src[si+1] + 0.114 * src[si+2];
+        lum = (lum - 128) * contrast + 128;
+        lum = Math.max(0, Math.min(255, lum + threshold));
+
+        // Dot radius: sqrt gives area-proportional coverage
+        const maxR = cs * 0.5;
+        const r    = maxR * Math.sqrt(1 - lum / 255);
+
+        // Distance from cell centre (computed in grid space = Euclidean distance)
+        const du   = u - cu;
+        const dv   = v - cv;
+        const dist = Math.sqrt(du * du + dv * dv);
+
+        let bit = dist < r ? 0 : 255; // 0 = ink (shadow), 255 = paper (highlight)
+        if (invert) bit = 255 - bit;
+
+        const col = bit === 255 ? inkRgb : paperRgb;
+        const di  = (py * ow + px) * 4;
+        dst[di]   = col[0];
+        dst[di+1] = col[1];
+        dst[di+2] = col[2];
+        dst[di+3] = 255;
+      }
+    }
+    return { imageData: out, ow, oh };
+  }
+
+  // ── Jarvis-Judice-Ninke — error spreads across 12 neighbours over 3 rows
+  if (pattern === 'jarvis') {
+    const gray = new Float32Array(ow * oh);
+    for (let py = 0; py < oh; py++) {
+      for (let px = 0; px < ow; px++) {
+        const sx = Math.min(Math.round(px * scale + scale / 2), w - 1);
+        const sy = Math.min(Math.round(py * scale + scale / 2), h - 1);
+        const si = (sy * w + sx) * 4;
+        let lum = 0.299 * src[si] + 0.587 * src[si+1] + 0.114 * src[si+2];
+        lum = (lum - 128) * contrast + 128;
+        lum = Math.max(0, Math.min(255, lum + threshold));
+        gray[py * ow + px] = lum;
+      }
+    }
+    for (let py = 0; py < oh; py++) {
+      for (let px = 0; px < ow; px++) {
+        const i   = py * ow + px;
+        const old = gray[i];
+        const bit = old > 127 ? 255 : 0;
+        const err = old - bit;
+        gray[i] = bit;
+        const K = 1 / 48;
+        if (px+1 < ow)               gray[i+1]         += err * 7*K;
+        if (px+2 < ow)               gray[i+2]         += err * 5*K;
+        if (py+1 < oh) {
+          if (px-2 >= 0)             gray[i+ow-2]      += err * 3*K;
+          if (px-1 >= 0)             gray[i+ow-1]      += err * 5*K;
+                                     gray[i+ow]        += err * 7*K;
+          if (px+1 < ow)             gray[i+ow+1]      += err * 5*K;
+          if (px+2 < ow)             gray[i+ow+2]      += err * 3*K;
+        }
+        if (py+2 < oh) {
+          if (px-2 >= 0)             gray[i+ow*2-2]    += err * 1*K;
+          if (px-1 >= 0)             gray[i+ow*2-1]    += err * 3*K;
+                                     gray[i+ow*2]      += err * 5*K;
+          if (px+1 < ow)             gray[i+ow*2+1]    += err * 3*K;
+          if (px+2 < ow)             gray[i+ow*2+2]    += err * 1*K;
+        }
+      }
+    }
+    for (let i = 0; i < ow * oh; i++) {
+      let bit = gray[i] > 127 ? 255 : 0;
+      if (invert) bit = 255 - bit;
+      const col = bit === 255 ? inkRgb : paperRgb;
+      const di = i * 4;
+      dst[di] = col[0]; dst[di+1] = col[1]; dst[di+2] = col[2]; dst[di+3] = 255;
+    }
+    return { imageData: out, ow, oh };
+  }
+
+  // ── Stucki — heavier centre propagation than Jarvis, slightly sharper
+  if (pattern === 'stucki') {
+    const gray = new Float32Array(ow * oh);
+    for (let py = 0; py < oh; py++) {
+      for (let px = 0; px < ow; px++) {
+        const sx = Math.min(Math.round(px * scale + scale / 2), w - 1);
+        const sy = Math.min(Math.round(py * scale + scale / 2), h - 1);
+        const si = (sy * w + sx) * 4;
+        let lum = 0.299 * src[si] + 0.587 * src[si+1] + 0.114 * src[si+2];
+        lum = (lum - 128) * contrast + 128;
+        lum = Math.max(0, Math.min(255, lum + threshold));
+        gray[py * ow + px] = lum;
+      }
+    }
+    for (let py = 0; py < oh; py++) {
+      for (let px = 0; px < ow; px++) {
+        const i   = py * ow + px;
+        const old = gray[i];
+        const bit = old > 127 ? 255 : 0;
+        const err = old - bit;
+        gray[i] = bit;
+        const K = 1 / 42;
+        if (px+1 < ow)               gray[i+1]         += err * 8*K;
+        if (px+2 < ow)               gray[i+2]         += err * 4*K;
+        if (py+1 < oh) {
+          if (px-2 >= 0)             gray[i+ow-2]      += err * 2*K;
+          if (px-1 >= 0)             gray[i+ow-1]      += err * 4*K;
+                                     gray[i+ow]        += err * 8*K;
+          if (px+1 < ow)             gray[i+ow+1]      += err * 4*K;
+          if (px+2 < ow)             gray[i+ow+2]      += err * 2*K;
+        }
+        if (py+2 < oh) {
+          if (px-2 >= 0)             gray[i+ow*2-2]    += err * 1*K;
+          if (px-1 >= 0)             gray[i+ow*2-1]    += err * 2*K;
+                                     gray[i+ow*2]      += err * 4*K;
+          if (px+1 < ow)             gray[i+ow*2+1]    += err * 2*K;
+          if (px+2 < ow)             gray[i+ow*2+2]    += err * 1*K;
+        }
+      }
+    }
+    for (let i = 0; i < ow * oh; i++) {
+      let bit = gray[i] > 127 ? 255 : 0;
+      if (invert) bit = 255 - bit;
+      const col = bit === 255 ? inkRgb : paperRgb;
+      const di = i * 4;
+      dst[di] = col[0]; dst[di+1] = col[1]; dst[di+2] = col[2]; dst[di+3] = 255;
+    }
+    return { imageData: out, ow, oh };
+  }
+
+  // ── Ostromoukhov — variable weights per luminance, 3 neighbours only
+  if (pattern === 'ostromoukhov') {
+    const gray = new Float32Array(ow * oh);
+    for (let py = 0; py < oh; py++) {
+      for (let px = 0; px < ow; px++) {
+        const sx = Math.min(Math.round(px * scale + scale / 2), w - 1);
+        const sy = Math.min(Math.round(py * scale + scale / 2), h - 1);
+        const si = (sy * w + sx) * 4;
+        let lum = 0.299 * src[si] + 0.587 * src[si+1] + 0.114 * src[si+2];
+        lum = (lum - 128) * contrast + 128;
+        lum = Math.max(0, Math.min(255, lum + threshold));
+        gray[py * ow + px] = lum;
+      }
+    }
+    for (let py = 0; py < oh; py++) {
+      for (let px = 0; px < ow; px++) {
+        const i   = py * ow + px;
+        const old = gray[i];
+        const bit = old > 127 ? 255 : 0;
+        const err = old - bit;
+        gray[i] = bit;
+        const idx       = Math.max(0, Math.min(255, Math.round(old)));
+        const [c1,c2,c3] = OSTROMOUKHOV_TABLE[idx];
+        const sum       = c1 + c2 + c3;
+        if (sum > 0) {
+          if (px+1 < ow)             gray[i+1]      += err * c1 / sum;
+          if (py+1 < oh) {
+            if (px-1 >= 0)           gray[i+ow-1]   += err * c2 / sum;
+                                     gray[i+ow]     += err * c3 / sum;
+          }
+        }
+      }
+    }
+    for (let i = 0; i < ow * oh; i++) {
+      let bit = gray[i] > 127 ? 255 : 0;
+      if (invert) bit = 255 - bit;
+      const col = bit === 255 ? inkRgb : paperRgb;
+      const di = i * 4;
+      dst[di] = col[0]; dst[di+1] = col[1]; dst[di+2] = col[2]; dst[di+3] = 255;
+    }
+    return { imageData: out, ow, oh };
+  }
+
+  // ── Ordered dither (Bayer, Noise)
   const mat   = BAYER[pattern] || BAYER.bayer4;
   const mSize = mat ? mat.length : 4;
   const mMax  = mSize * mSize;
@@ -1302,14 +1560,6 @@ function dither(imageData, w, h) {
       let bit;
       if (pattern === 'noise') {
         bit = lum > (Math.random() * 255) ? 255 : 0;
-      } else if (pattern === 'halftone') {
-        // simple circular halftone
-        const cx = (px % mSize) - mSize / 2 + 0.5;
-        const cy = (py % mSize) - mSize / 2 + 0.5;
-        const dist = Math.sqrt(cx*cx + cy*cy);
-        const maxDist = mSize / 2;
-        const dotThreshold = (1 - lum / 255) * maxDist;
-        bit = dist < dotThreshold ? 0 : 255;
       } else {
         const mx = px % mSize;
         const my = py % mSize;
@@ -1741,6 +1991,7 @@ function applyPreset(name, btn) {
   clearActivePreset();
   btn.classList.add('active');
 
+  updateHalftoneControls();
   rerender();
 }
 
@@ -1801,9 +2052,29 @@ sldScatter.addEventListener('input', () => {
   rerender();
 });
 
+sldDotSize.addEventListener('input', () => {
+  state.dotSize = +sldDotSize.value;
+  valDotSize.textContent = state.dotSize;
+  rerender();
+});
+
+sldScreenAngle.addEventListener('input', () => {
+  state.screenAngle = +sldScreenAngle.value;
+  valScreenAngle.textContent = state.screenAngle + '°';
+  rerender();
+});
+
+// ── Halftone-specific control visibility
+function updateHalftoneControls() {
+  const isHalftone = state.pattern === 'halftone';
+  paramDotSize.classList.toggle('param-disabled', !isHalftone);
+  paramScreenAngle.classList.toggle('param-disabled', !isHalftone);
+}
+
 selPattern.addEventListener('change', () => {
   clearActivePreset();
   state.pattern = selPattern.value;
+  updateHalftoneControls();
   rerender();
 });
 
@@ -2036,6 +2307,7 @@ document.querySelectorAll('.group > .group-label').forEach(label => {
 });
 
 // ── Init
+updateHalftoneControls();
 updateStatus();
 </script>
 </body>
