@@ -495,6 +495,100 @@
       text-transform: uppercase;
     }
 
+    /* ── PALETTE UI ── */
+    .palette-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-bottom: 8px;
+    }
+
+    .palette-swatch-wrap {
+      position: relative;
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
+    }
+
+    .palette-swatch-bg {
+      width: 20px;
+      height: 20px;
+      border: 1px solid var(--border);
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .palette-swatch-bg input[type="color"] {
+      position: absolute;
+      inset: -4px;
+      width: calc(100% + 8px);
+      height: calc(100% + 8px);
+      opacity: 0;
+      cursor: pointer;
+      border: none;
+      padding: 0;
+    }
+
+    .palette-remove {
+      position: absolute;
+      top: -5px;
+      right: -5px;
+      width: 11px;
+      height: 11px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--mid);
+      font-size: 8px;
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      line-height: 1;
+      font-family: var(--font);
+      z-index: 1;
+      transition: border-color 0.1s, color 0.1s;
+    }
+
+    .palette-remove:hover { border-color: var(--fg); color: var(--fg); }
+
+    /* Show × on hover (desktop) — only when palette > 2 */
+    .palette-swatch-wrap.removable:hover .palette-remove { display: flex; }
+
+    /* Show × on touch-tap selection (mobile) */
+    .palette-swatch-wrap.touch-selected .palette-remove { display: flex; }
+
+    .palette-add {
+      width: 20px;
+      height: 20px;
+      border: 1px dashed var(--border);
+      background: transparent;
+      color: var(--mid);
+      font-size: 13px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font);
+      line-height: 1;
+      padding: 0;
+      flex-shrink: 0;
+      transition: border-color 0.1s, color 0.1s;
+    }
+
+    .palette-add:hover { border-color: var(--fg); color: var(--fg); }
+
+    .palette-hex {
+      font-size: 9px;
+      color: var(--mid);
+      letter-spacing: 0.06em;
+      font-family: var(--font);
+      line-height: 1.6;
+      word-break: break-all;
+    }
+
     /* ── THEME TOGGLE ── */
     .theme-toggle {
       background: transparent;
@@ -799,6 +893,12 @@
       .colour-label { font-size: 12px; font-weight: 400; letter-spacing: 0.1em; }
       .colour-hex   { font-size: 12px; }
 
+      /* Palette UI — bigger swatches + add button on mobile */
+      .palette-swatch-wrap,
+      .palette-swatch-bg,
+      .palette-add { width: 28px; height: 28px; }
+      .palette-hex { font-size: 11px; }
+
       /* Footer links — always show arrow, no hover needed on touch */
       .footer-link       { font-size: 16px; }
       .footer-link-arrow { opacity: 1; }
@@ -999,27 +1099,8 @@
       <div class="group">
         <div class="group-label" data-label="Colour">Colour<span class="group-toggle">−</span></div>
         <div class="group-body">
-
-          <div class="colour-row">
-            <span class="colour-label">Ink</span>
-            <div class="colour-input-wrap">
-              <div class="colour-swatch" id="swatchInk">
-                <input type="color" id="pickerInk" value="#ffffff" />
-              </div>
-              <span class="colour-hex" id="hexInk">#ffffff</span>
-            </div>
-          </div>
-
-          <div class="colour-row">
-            <span class="colour-label">Paper</span>
-            <div class="colour-input-wrap">
-              <div class="colour-swatch" id="swatchPaper">
-                <input type="color" id="pickerPaper" value="#000000" />
-              </div>
-              <span class="colour-hex" id="hexPaper">#000000</span>
-            </div>
-          </div>
-
+          <div class="palette-row" id="paletteRow"></div>
+          <div class="palette-hex" id="paletteHex"></div>
         </div>
       </div>
 
@@ -1099,8 +1180,11 @@ const state = {
   dotSize: 6,
   screenAngle: 45,
   pattern: 'bayer4',
-  inkColor: '#ffffff',
-  paperColor: '#000000',
+  palette: ['#ffffff', '#000000'],
+  get inkColor()    { return this.palette[0]; },
+  set inkColor(v)   { this.palette[0] = v; },
+  get paperColor()  { return this.palette[this.palette.length - 1]; },
+  set paperColor(v) { this.palette[this.palette.length - 1] = v; },
   cameraStream: null,
   rafId: null,
   frameW: 0,
@@ -1152,12 +1236,6 @@ const valDotSize      = document.getElementById('valDotSize');
 const valScreenAngle  = document.getElementById('valScreenAngle');
 const paramDotSize    = document.getElementById('paramDotSize');
 const paramScreenAngle = document.getElementById('paramScreenAngle');
-const pickerInk   = document.getElementById('pickerInk');
-const pickerPaper = document.getElementById('pickerPaper');
-const swatchInk   = document.getElementById('swatchInk');
-const swatchPaper = document.getElementById('swatchPaper');
-const hexInk      = document.getElementById('hexInk');
-const hexPaper    = document.getElementById('hexPaper');
 
 const statusDims   = document.getElementById('statusDims');
 const statusEffect = document.getElementById('statusEffect');
@@ -1234,108 +1312,143 @@ function hexToRgb(hex) {
   ];
 }
 
-// ── Dither engine
+function rgbLum(c) { return 0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2]; }
+
+// ── Error diffusion kernels: [dy, dx, weight]
+const KERNELS = {
+  floyd: [
+    [0,  1,  7/16],
+    [1, -1,  3/16],
+    [1,  0,  5/16],
+    [1,  1,  1/16],
+  ],
+  atkinson: [
+    [0, 1, 1/8], [0, 2, 1/8],
+    [1, -1, 1/8], [1, 0, 1/8], [1, 1, 1/8],
+    [2, 0, 1/8],
+  ],
+  jarvis: [
+    [0,  1, 7/48], [0,  2, 5/48],
+    [1, -2, 3/48], [1, -1, 5/48], [1, 0, 7/48], [1, 1, 5/48], [1, 2, 3/48],
+    [2, -2, 1/48], [2, -1, 3/48], [2, 0, 5/48], [2, 1, 3/48], [2, 2, 1/48],
+  ],
+  stucki: [
+    [0,  1, 8/42], [0,  2, 4/42],
+    [1, -2, 2/42], [1, -1, 4/42], [1, 0, 8/42], [1, 1, 4/42], [1, 2, 2/42],
+    [2, -2, 1/42], [2, -1, 2/42], [2, 0, 4/42], [2, 1, 2/42], [2, 2, 1/42],
+  ],
+};
+
+// ── Dither engine — N-colour palette, RGB vector error propagation
 function dither(imageData, w, h) {
   const { pattern, scale, threshold, contrast, invert } = state;
-  const inkRgb   = hexToRgb(state.inkColor);
-  const paperRgb = hexToRgb(state.paperColor);
   const src = imageData.data;
 
-  // output canvas (scaled down)
   const ow = Math.ceil(w / scale);
   const oh = Math.ceil(h / scale);
   const out = ctx.createImageData(ow, oh);
   const dst = out.data;
 
-  // ── Floyd-Steinberg: two-pass, self-contained
-  if (pattern === 'floyd') {
+  // Effective palette: reversed when invert is on
+  const pal    = invert ? [...state.palette].reverse() : [...state.palette];
+  const palRgb = pal.map(hexToRgb);
+  const N      = palRgb.length;
 
-    const gray = new Float32Array(ow * oh);
-    for (let py = 0; py < oh; py++) {
-      for (let px = 0; px < ow; px++) {
-        const sx = Math.min(Math.round(px * scale + scale / 2), w - 1);
-        const sy = Math.min(Math.round(py * scale + scale / 2), h - 1);
-        const si = (sy * w + sx) * 4;
-        let lum = 0.299 * src[si] + 0.587 * src[si+1] + 0.114 * src[si+2];
-        lum = (lum - 128) * contrast + 128;
-        lum = Math.max(0, Math.min(255, lum + threshold));
-        gray[py * ow + px] = lum;
-      }
-    }
+  // Palette sorted by luminance — used by ordered dithering
+  const palByLum = [...palRgb].sort((a, b) => rgbLum(a) - rgbLum(b));
 
-    for (let py = 0; py < oh; py++) {
-      for (let px = 0; px < ow; px++) {
-        const i   = py * ow + px;
-        const old = gray[i];
-        const bit = old > 127 ? 255 : 0;
-        const err = old - bit;
-        gray[i]   = bit;
-        if (px + 1 < ow)           gray[i + 1]      += err * 7 / 16;
-        if (py + 1 < oh) {
-          if (px - 1 >= 0)         gray[i + ow - 1] += err * 3 / 16;
-                                   gray[i + ow]     += err * 5 / 16;
-          if (px + 1 < ow)         gray[i + ow + 1] += err * 1 / 16;
-        }
-      }
+  // Nearest palette colour by RGB Euclidean distance — error diffusion snap
+  function nearestRGB(r, g, b) {
+    let minD = Infinity, best = palRgb[0];
+    for (const c of palRgb) {
+      const d = (r - c[0]) ** 2 + (g - c[1]) ** 2 + (b - c[2]) ** 2;
+      if (d < minD) { minD = d; best = c; }
     }
-
-    for (let i = 0; i < ow * oh; i++) {
-      let bit = gray[i] > 127 ? 255 : 0;
-      if (invert) bit = 255 - bit;
-      const col = bit === 255 ? inkRgb : paperRgb;
-      const di = i * 4;
-      dst[di] = col[0]; dst[di+1] = col[1]; dst[di+2] = col[2];
-      dst[di+3] = 255;
-    }
-    return { imageData: out, ow, oh };
+    return best;
   }
 
-  // ── Atkinson: 6 neighbours, 1/8 each (3/4 total propagation)
-  if (pattern === 'atkinson') {
+  // Ordered dither: map lum [0..255] + normalised threshold [0..1] → palette entry
+  // With 2 colours behaves identically to the previous binary snap
+  function orderedSnap(lum, threshNorm) {
+    const t  = Math.max(0, Math.min(N - 1, lum / 255 * (N - 1)));
+    const lo = Math.floor(t);
+    const hi = Math.min(lo + 1, N - 1);
+    if (lo === hi) return palByLum[lo];
+    return (t - lo) > threshNorm ? palByLum[hi] : palByLum[lo];
+  }
 
-    const gray = new Float32Array(ow * oh);
+  // ── Error diffusion (Floyd-Steinberg, Atkinson, Jarvis, Stucki, Ostromoukhov)
+  // RGB vector propagation: works for any palette, 2-colour output is identical to V2.9
+  if (['floyd', 'atkinson', 'jarvis', 'stucki', 'ostromoukhov'].includes(pattern)) {
+
+    const rBuf = new Float32Array(ow * oh);
+    const gBuf = new Float32Array(ow * oh);
+    const bBuf = new Float32Array(ow * oh);
+
+    // Sample source and apply contrast + threshold per channel
     for (let py = 0; py < oh; py++) {
       for (let px = 0; px < ow; px++) {
         const sx = Math.min(Math.round(px * scale + scale / 2), w - 1);
         const sy = Math.min(Math.round(py * scale + scale / 2), h - 1);
         const si = (sy * w + sx) * 4;
-        let lum = 0.299 * src[si] + 0.587 * src[si+1] + 0.114 * src[si+2];
-        lum = (lum - 128) * contrast + 128;
-        lum = Math.max(0, Math.min(255, lum + threshold));
-        gray[py * ow + px] = lum;
-      }
-    }
-
-    for (let py = 0; py < oh; py++) {
-      for (let px = 0; px < ow; px++) {
         const i  = py * ow + px;
-        const old = gray[i];
-        const bit = old > 127 ? 255 : 0;
-        const e8  = (old - bit) / 8;
-        gray[i]   = bit;
-        if (px + 1 < ow)           gray[i + 1]      += e8;
-        if (px + 2 < ow)           gray[i + 2]      += e8;
-        if (py + 1 < oh) {
-          if (px - 1 >= 0)         gray[i + ow - 1] += e8;
-                                   gray[i + ow]     += e8;
-          if (px + 1 < ow)         gray[i + ow + 1] += e8;
-        }
-        if (py + 2 < oh)           gray[i + ow * 2] += e8;
+        rBuf[i] = Math.max(0, Math.min(255, (src[si]     - 128) * contrast + 128 + threshold));
+        gBuf[i] = Math.max(0, Math.min(255, (src[si + 1] - 128) * contrast + 128 + threshold));
+        bBuf[i] = Math.max(0, Math.min(255, (src[si + 2] - 128) * contrast + 128 + threshold));
       }
     }
 
-    for (let i = 0; i < ow * oh; i++) {
-      let bit = gray[i] > 127 ? 255 : 0;
-      if (invert) bit = 255 - bit;
-      const col = bit === 255 ? inkRgb : paperRgb;
-      const di = i * 4;
-      dst[di] = col[0]; dst[di+1] = col[1]; dst[di+2] = col[2];
-      dst[di+3] = 255;
+    // Diffusion pass
+    for (let py = 0; py < oh; py++) {
+      for (let px = 0; px < ow; px++) {
+        const i            = py * ow + px;
+        const r = rBuf[i], g = gBuf[i], b = bBuf[i];
+        const [nr, ng, nb] = nearestRGB(r, g, b);
+        rBuf[i] = nr; gBuf[i] = ng; bBuf[i] = nb;
+        dst[i * 4] = nr; dst[i * 4 + 1] = ng; dst[i * 4 + 2] = nb; dst[i * 4 + 3] = 255;
+
+        const er = r - nr, eg = g - ng, eb = b - nb;
+
+        if (pattern === 'ostromoukhov') {
+          // Variable weights indexed by current pixel luminance
+          const lum          = Math.max(0, Math.min(255, Math.round(0.299 * r + 0.587 * g + 0.114 * b)));
+          const [c1, c2, c3] = OSTROMOUKHOV_TABLE[lum];
+          const sum          = c1 + c2 + c3;
+          if (sum > 0) {
+            if (px + 1 < ow) {
+              rBuf[i + 1]      += er * c1 / sum;
+              gBuf[i + 1]      += eg * c1 / sum;
+              bBuf[i + 1]      += eb * c1 / sum;
+            }
+            if (py + 1 < oh) {
+              if (px - 1 >= 0) {
+                rBuf[i + ow - 1] += er * c2 / sum;
+                gBuf[i + ow - 1] += eg * c2 / sum;
+                bBuf[i + ow - 1] += eb * c2 / sum;
+              }
+              rBuf[i + ow]     += er * c3 / sum;
+              gBuf[i + ow]     += eg * c3 / sum;
+              bBuf[i + ow]     += eb * c3 / sum;
+            }
+          }
+        } else {
+          // Standard kernels (floyd, atkinson, jarvis, stucki)
+          for (const [dy, dx, wt] of KERNELS[pattern]) {
+            const nx = px + dx, ny = py + dy;
+            if (nx < 0 || nx >= ow || ny >= oh) continue;
+            const di = ny * ow + nx;
+            rBuf[di] += er * wt;
+            gBuf[di] += eg * wt;
+            bBuf[di] += eb * wt;
+          }
+        }
+      }
     }
     return { imageData: out, ow, oh };
   }
 
-  // ── AM Halftone — rotated dot grid, luminance-driven dot size
+  // ── AM Halftone — rotated dot grid, N-colour via luminance-mapped palette snap
+  // dotPos = 1 - (dist/maxR)² preserves area-proportional dot coverage from V2.9
   if (pattern === 'halftone') {
     const cs   = state.dotSize;
     const ang  = state.screenAngle * Math.PI / 180;
@@ -1344,201 +1457,43 @@ function dither(imageData, w, h) {
 
     for (let py = 0; py < oh; py++) {
       for (let px = 0; px < ow; px++) {
-        // Rotate pixel into grid space
-        const u = px * cosA + py * sinA;
-        const v = -px * sinA + py * cosA;
-
-        // Nearest cell centre in grid space
+        const u  = px * cosA + py * sinA;
+        const v  = -px * sinA + py * cosA;
         const ci = Math.floor(u / cs);
         const cj = Math.floor(v / cs);
         const cu = (ci + 0.5) * cs;
         const cv = (cj + 0.5) * cs;
-
-        // Cell centre back in source (w×h) image space for sampling
         const icx = cu * cosA - cv * sinA;
         const icy = cu * sinA + cv * cosA;
         const sx  = Math.max(0, Math.min(w - 1, Math.round(icx * scale)));
         const sy  = Math.max(0, Math.min(h - 1, Math.round(icy * scale)));
         const si  = (sy * w + sx) * 4;
 
-        let lum = 0.299 * src[si] + 0.587 * src[si+1] + 0.114 * src[si+2];
-        lum = (lum - 128) * contrast + 128;
-        lum = Math.max(0, Math.min(255, lum + threshold));
+        let lum = 0.299 * src[si] + 0.587 * src[si + 1] + 0.114 * src[si + 2];
+        lum = Math.max(0, Math.min(255, (lum - 128) * contrast + 128 + threshold));
 
-        // Dot radius: sqrt gives area-proportional coverage
-        const maxR = cs * 0.5;
-        const r    = maxR * Math.sqrt(1 - lum / 255);
+        const maxR  = cs * 0.5;
+        const du    = u - cu;
+        const dv    = v - cv;
+        const dist  = Math.sqrt(du * du + dv * dv);
+        // dotPos: 1 = cell centre (darkest/ink), 0 = cell edge (lightest/paper)
+        const dotPos = Math.max(0, 1 - (dist / maxR) ** 2);
 
-        // Distance from cell centre (computed in grid space = Euclidean distance)
-        const du   = u - cu;
-        const dv   = v - cv;
-        const dist = Math.sqrt(du * du + dv * dv);
-
-        let bit = dist < r ? 0 : 255; // 0 = ink (shadow), 255 = paper (highlight)
-        if (invert) bit = 255 - bit;
-
-        const col = bit === 255 ? inkRgb : paperRgb;
+        const col = orderedSnap(lum, dotPos);
         const di  = (py * ow + px) * 4;
-        dst[di]   = col[0];
-        dst[di+1] = col[1];
-        dst[di+2] = col[2];
-        dst[di+3] = 255;
+        dst[di]   = col[0]; dst[di + 1] = col[1]; dst[di + 2] = col[2]; dst[di + 3] = 255;
       }
     }
     return { imageData: out, ow, oh };
   }
 
-  // ── Jarvis-Judice-Ninke — error spreads across 12 neighbours over 3 rows
-  if (pattern === 'jarvis') {
-    const gray = new Float32Array(ow * oh);
-    for (let py = 0; py < oh; py++) {
-      for (let px = 0; px < ow; px++) {
-        const sx = Math.min(Math.round(px * scale + scale / 2), w - 1);
-        const sy = Math.min(Math.round(py * scale + scale / 2), h - 1);
-        const si = (sy * w + sx) * 4;
-        let lum = 0.299 * src[si] + 0.587 * src[si+1] + 0.114 * src[si+2];
-        lum = (lum - 128) * contrast + 128;
-        lum = Math.max(0, Math.min(255, lum + threshold));
-        gray[py * ow + px] = lum;
-      }
-    }
-    for (let py = 0; py < oh; py++) {
-      for (let px = 0; px < ow; px++) {
-        const i   = py * ow + px;
-        const old = gray[i];
-        const bit = old > 127 ? 255 : 0;
-        const err = old - bit;
-        gray[i] = bit;
-        const K = 1 / 48;
-        if (px+1 < ow)               gray[i+1]         += err * 7*K;
-        if (px+2 < ow)               gray[i+2]         += err * 5*K;
-        if (py+1 < oh) {
-          if (px-2 >= 0)             gray[i+ow-2]      += err * 3*K;
-          if (px-1 >= 0)             gray[i+ow-1]      += err * 5*K;
-                                     gray[i+ow]        += err * 7*K;
-          if (px+1 < ow)             gray[i+ow+1]      += err * 5*K;
-          if (px+2 < ow)             gray[i+ow+2]      += err * 3*K;
-        }
-        if (py+2 < oh) {
-          if (px-2 >= 0)             gray[i+ow*2-2]    += err * 1*K;
-          if (px-1 >= 0)             gray[i+ow*2-1]    += err * 3*K;
-                                     gray[i+ow*2]      += err * 5*K;
-          if (px+1 < ow)             gray[i+ow*2+1]    += err * 3*K;
-          if (px+2 < ow)             gray[i+ow*2+2]    += err * 1*K;
-        }
-      }
-    }
-    for (let i = 0; i < ow * oh; i++) {
-      let bit = gray[i] > 127 ? 255 : 0;
-      if (invert) bit = 255 - bit;
-      const col = bit === 255 ? inkRgb : paperRgb;
-      const di = i * 4;
-      dst[di] = col[0]; dst[di+1] = col[1]; dst[di+2] = col[2]; dst[di+3] = 255;
-    }
-    return { imageData: out, ow, oh };
-  }
-
-  // ── Stucki — heavier centre propagation than Jarvis, slightly sharper
-  if (pattern === 'stucki') {
-    const gray = new Float32Array(ow * oh);
-    for (let py = 0; py < oh; py++) {
-      for (let px = 0; px < ow; px++) {
-        const sx = Math.min(Math.round(px * scale + scale / 2), w - 1);
-        const sy = Math.min(Math.round(py * scale + scale / 2), h - 1);
-        const si = (sy * w + sx) * 4;
-        let lum = 0.299 * src[si] + 0.587 * src[si+1] + 0.114 * src[si+2];
-        lum = (lum - 128) * contrast + 128;
-        lum = Math.max(0, Math.min(255, lum + threshold));
-        gray[py * ow + px] = lum;
-      }
-    }
-    for (let py = 0; py < oh; py++) {
-      for (let px = 0; px < ow; px++) {
-        const i   = py * ow + px;
-        const old = gray[i];
-        const bit = old > 127 ? 255 : 0;
-        const err = old - bit;
-        gray[i] = bit;
-        const K = 1 / 42;
-        if (px+1 < ow)               gray[i+1]         += err * 8*K;
-        if (px+2 < ow)               gray[i+2]         += err * 4*K;
-        if (py+1 < oh) {
-          if (px-2 >= 0)             gray[i+ow-2]      += err * 2*K;
-          if (px-1 >= 0)             gray[i+ow-1]      += err * 4*K;
-                                     gray[i+ow]        += err * 8*K;
-          if (px+1 < ow)             gray[i+ow+1]      += err * 4*K;
-          if (px+2 < ow)             gray[i+ow+2]      += err * 2*K;
-        }
-        if (py+2 < oh) {
-          if (px-2 >= 0)             gray[i+ow*2-2]    += err * 1*K;
-          if (px-1 >= 0)             gray[i+ow*2-1]    += err * 2*K;
-                                     gray[i+ow*2]      += err * 4*K;
-          if (px+1 < ow)             gray[i+ow*2+1]    += err * 2*K;
-          if (px+2 < ow)             gray[i+ow*2+2]    += err * 1*K;
-        }
-      }
-    }
-    for (let i = 0; i < ow * oh; i++) {
-      let bit = gray[i] > 127 ? 255 : 0;
-      if (invert) bit = 255 - bit;
-      const col = bit === 255 ? inkRgb : paperRgb;
-      const di = i * 4;
-      dst[di] = col[0]; dst[di+1] = col[1]; dst[di+2] = col[2]; dst[di+3] = 255;
-    }
-    return { imageData: out, ow, oh };
-  }
-
-  // ── Ostromoukhov — variable weights per luminance, 3 neighbours only
-  if (pattern === 'ostromoukhov') {
-    const gray = new Float32Array(ow * oh);
-    for (let py = 0; py < oh; py++) {
-      for (let px = 0; px < ow; px++) {
-        const sx = Math.min(Math.round(px * scale + scale / 2), w - 1);
-        const sy = Math.min(Math.round(py * scale + scale / 2), h - 1);
-        const si = (sy * w + sx) * 4;
-        let lum = 0.299 * src[si] + 0.587 * src[si+1] + 0.114 * src[si+2];
-        lum = (lum - 128) * contrast + 128;
-        lum = Math.max(0, Math.min(255, lum + threshold));
-        gray[py * ow + px] = lum;
-      }
-    }
-    for (let py = 0; py < oh; py++) {
-      for (let px = 0; px < ow; px++) {
-        const i   = py * ow + px;
-        const old = gray[i];
-        const bit = old > 127 ? 255 : 0;
-        const err = old - bit;
-        gray[i] = bit;
-        const idx       = Math.max(0, Math.min(255, Math.round(old)));
-        const [c1,c2,c3] = OSTROMOUKHOV_TABLE[idx];
-        const sum       = c1 + c2 + c3;
-        if (sum > 0) {
-          if (px+1 < ow)             gray[i+1]      += err * c1 / sum;
-          if (py+1 < oh) {
-            if (px-1 >= 0)           gray[i+ow-1]   += err * c2 / sum;
-                                     gray[i+ow]     += err * c3 / sum;
-          }
-        }
-      }
-    }
-    for (let i = 0; i < ow * oh; i++) {
-      let bit = gray[i] > 127 ? 255 : 0;
-      if (invert) bit = 255 - bit;
-      const col = bit === 255 ? inkRgb : paperRgb;
-      const di = i * 4;
-      dst[di] = col[0]; dst[di+1] = col[1]; dst[di+2] = col[2]; dst[di+3] = 255;
-    }
-    return { imageData: out, ow, oh };
-  }
-
-  // ── Ordered dither (Bayer, Noise)
+  // ── Ordered dither (Bayer 2×2 / 4×4 / 8×8, Noise)
   const mat   = BAYER[pattern] || BAYER.bayer4;
   const mSize = mat ? mat.length : 4;
   const mMax  = mSize * mSize;
 
   for (let py = 0; py < oh; py++) {
     for (let px = 0; px < ow; px++) {
-      // Sample source pixel (centre of scaled cell) + scatter jitter
       const jitter = state.scatter;
       const jx = jitter > 0 ? Math.round((Math.random() - 0.5) * 2 * jitter) : 0;
       const jy = jitter > 0 ? Math.round((Math.random() - 0.5) * 2 * jitter) : 0;
@@ -1546,35 +1501,16 @@ function dither(imageData, w, h) {
       const sy = Math.min(Math.max(0, Math.round(py * scale + scale / 2) + jy), h - 1);
       const si = (sy * w + sx) * 4;
 
-      // Grayscale
-      let lum = 0.299 * src[si] + 0.587 * src[si+1] + 0.114 * src[si+2];
+      let lum = 0.299 * src[si] + 0.587 * src[si + 1] + 0.114 * src[si + 2];
+      lum = Math.max(0, Math.min(255, (lum - 128) * contrast + 128 + threshold));
 
-      // Contrast
-      lum = ((lum - 128) * contrast + 128);
-      lum = Math.max(0, Math.min(255, lum));
+      const threshNorm = pattern === 'noise'
+        ? Math.random()
+        : mat[py % mSize][px % mSize] / mMax;
 
-      // Threshold offset
-      lum = Math.max(0, Math.min(255, lum + threshold));
-
-      // Dither
-      let bit;
-      if (pattern === 'noise') {
-        bit = lum > (Math.random() * 255) ? 255 : 0;
-      } else {
-        const mx = px % mSize;
-        const my = py % mSize;
-        const bayerVal = (mat[my][mx] / mMax) * 255;
-        bit = lum > bayerVal ? 255 : 0;
-      }
-
-      if (invert) bit = 255 - bit;
-
-      const col = bit === 255 ? inkRgb : paperRgb;
-      const di = (py * ow + px) * 4;
-      dst[di]   = col[0];
-      dst[di+1] = col[1];
-      dst[di+2] = col[2];
-      dst[di+3] = 255;
+      const col = orderedSnap(lum, threshNorm);
+      const di  = (py * ow + px) * 4;
+      dst[di]   = col[0]; dst[di + 1] = col[1]; dst[di + 2] = col[2]; dst[di + 3] = 255;
     }
   }
 
@@ -1871,7 +1807,7 @@ async function startGIFCapture() {
   }, 3000);
 }
 
-// ── SVG export
+// ── SVG export — N-colour: one <g> per ink slot, last palette entry = background rect
 function downloadSVG() {
   const scale   = state.scale;
   const ow      = Math.ceil(state.frameW / scale);
@@ -1883,40 +1819,52 @@ function downloadSVG() {
     if (!proceed) return;
   }
 
-  // Read dithered pixel data from canvas
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  const d = imageData.data;
+  const d  = imageData.data;
   const cw = canvas.width;
   const ch = canvas.height;
 
-  const inkRgb   = hexToRgb(state.inkColor);
-  const paperRgb = hexToRgb(state.paperColor);
-  const inkHex   = state.inkColor;
-  const paperHex = state.paperColor;
+  // Effective palette (respecting invert)
+  const pal    = state.invert ? [...state.palette].reverse() : [...state.palette];
+  const palRgb = pal.map(hexToRgb);
+  const N      = palRgb.length;
+  const bgHex  = pal[N - 1];  // last slot = background
 
-  // Sample dithered canvas at dithered resolution
-  const rects = [];
+  // Find nearest palette index by RGB distance
+  function nearestIdx(r, g, b) {
+    let minD = Infinity, best = 0;
+    for (let k = 0; k < N; k++) {
+      const c = palRgb[k];
+      const dist = (r - c[0]) ** 2 + (g - c[1]) ** 2 + (b - c[2]) ** 2;
+      if (dist < minD) { minD = dist; best = k; }
+    }
+    return best;
+  }
+
+  // Collect rect strings per palette slot (background slot excluded)
+  const groups = Array.from({ length: N - 1 }, () => []);
+
   for (let py = 0; py < oh; py++) {
     for (let px = 0; px < ow; px++) {
-      const sx = Math.min(Math.round(px * scale + scale / 2), cw - 1);
-      const sy = Math.min(Math.round(py * scale + scale / 2), ch - 1);
-      const i  = (sy * cw + sx) * 4;
-      const r = d[i], g = d[i+1], b = d[i+2];
-      // Determine if this is an ink pixel
-      const isInk = Math.abs(r - inkRgb[0]) < 16 && Math.abs(g - inkRgb[1]) < 16 && Math.abs(b - inkRgb[2]) < 16;
-      if (isInk) {
-        rects.push(`<rect x="${px}" y="${py}" width="1" height="1"/>`);
+      const sx  = Math.min(Math.round(px * scale + scale / 2), cw - 1);
+      const sy  = Math.min(Math.round(py * scale + scale / 2), ch - 1);
+      const i   = (sy * cw + sx) * 4;
+      const idx = nearestIdx(d[i], d[i + 1], d[i + 2]);
+      if (idx < N - 1) {
+        groups[idx].push(`<rect x="${px}" y="${py}" width="1" height="1"/>`);
       }
     }
   }
 
+  const gTags = groups
+    .map((rects, k) => rects.length ? `<g fill="${pal[k]}">${rects.join('')}</g>` : '')
+    .join('\n');
+
   const svg = [
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${ow} ${oh}" shape-rendering="crispEdges">`,
-    `<rect width="${ow}" height="${oh}" fill="${paperHex}"/>`,
-    `<g fill="${inkHex}">`,
-    rects.join(''),
-    `</g>`,
-    `</svg>`
+    `<rect width="${ow}" height="${oh}" fill="${bgHex}"/>`,
+    gTags,
+    `</svg>`,
   ].join('\n');
 
   const blob = new Blob([svg], { type: 'image/svg+xml' });
@@ -1943,11 +1891,11 @@ function downloadCanvas(type, quality) {
 
 // ── Presets
 const PRESETS = {
-  newsprint: { pattern: 'bayer4',   scale: 3, threshold: 10, contrast: 1.4, brightness:   0, blur: 1, pixelate: 1, scatter: 0, invert: false },
-  zine:      { pattern: 'atkinson', scale: 2, threshold: 20, contrast: 1.6, brightness: -10, blur: 0, pixelate: 1, scatter: 0, invert: false },
-  glitch:    { pattern: 'noise',    scale: 1, threshold:  0, contrast: 1.8, brightness:   0, blur: 0, pixelate: 1, scatter: 3, invert: true  },
-  lofi:      { pattern: 'bayer8',   scale: 4, threshold:  0, contrast: 1.2, brightness: -20, blur: 2, pixelate: 1, scatter: 0, invert: false },
-  raw:       { pattern: 'floyd',    scale: 1, threshold:  0, contrast: 1.0, brightness:   0, blur: 0, pixelate: 1, scatter: 0, invert: false },
+  newsprint: { pattern: 'bayer4',   scale: 3, threshold: 10, contrast: 1.4, brightness:   0, blur: 1, pixelate: 1, scatter: 0, invert: false, inkColor: '#1a1a1a', paperColor: '#f0ead6' },
+  zine:      { pattern: 'atkinson', scale: 2, threshold: 20, contrast: 1.6, brightness: -10, blur: 0, pixelate: 1, scatter: 0, invert: false, inkColor: '#0a0a0a', paperColor: '#f5f0e8' },
+  glitch:    { pattern: 'noise',    scale: 1, threshold:  0, contrast: 1.8, brightness:   0, blur: 0, pixelate: 1, scatter: 3, invert: true,  inkColor: '#ffffff', paperColor: '#000000' },
+  lofi:      { pattern: 'bayer8',   scale: 4, threshold:  0, contrast: 1.2, brightness: -20, blur: 2, pixelate: 1, scatter: 0, invert: false, inkColor: '#0a0a0a', paperColor: '#d9d9d9' },
+  raw:       { pattern: 'floyd',    scale: 1, threshold:  0, contrast: 1.0, brightness:   0, blur: 0, pixelate: 1, scatter: 0, invert: false, inkColor: '#ffffff', paperColor: '#000000' },
 };
 
 function clearActivePreset() {
@@ -1990,6 +1938,10 @@ function applyPreset(name, btn) {
   // Active state
   clearActivePreset();
   btn.classList.add('active');
+
+  // Reset palette to preset's 2-colour definition
+  state.palette = [p.inkColor, p.paperColor];
+  renderPaletteUI();
 
   updateHalftoneControls();
   rerender();
@@ -2085,29 +2037,107 @@ togInvert.addEventListener('click', () => {
   rerender();
 });
 
-// ── Colour controls
-function applySwatchBg(swatch, hex) {
-  swatch.style.background = hex;
-  // keep border visible on very light/dark colours
-  swatch.style.borderColor = hex === '#ffffff' || hex === '#000000' ? 'var(--border)' : hex;
+// ── Palette UI
+const paletteRow = document.getElementById('paletteRow');
+const paletteHex = document.getElementById('paletteHex');
+
+let _activeSwatch = -1; // mobile tap-to-select index
+
+function renderPaletteUI() {
+  paletteRow.innerHTML = '';
+  const N = state.palette.length;
+
+  state.palette.forEach((hex, idx) => {
+    const wrap = document.createElement('div');
+    wrap.className = 'palette-swatch-wrap' + (N > 2 ? ' removable' : '');
+
+    const bg = document.createElement('div');
+    bg.className = 'palette-swatch-bg';
+    bg.style.background   = hex;
+    bg.style.borderColor  = (hex === '#ffffff' || hex === '#000000') ? 'var(--border)' : hex;
+
+    const picker = document.createElement('input');
+    picker.type  = 'color';
+    picker.value = hex;
+    picker.addEventListener('input', () => {
+      state.palette[idx] = picker.value;
+      bg.style.background  = picker.value;
+      bg.style.borderColor = (picker.value === '#ffffff' || picker.value === '#000000')
+        ? 'var(--border)' : picker.value;
+      updatePaletteHex();
+      clearActivePreset();
+      rerender();
+    });
+    bg.appendChild(picker);
+
+    const rmBtn = document.createElement('button');
+    rmBtn.className   = 'palette-remove';
+    rmBtn.textContent = '×';
+    rmBtn.title       = 'Remove';
+    rmBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (state.palette.length <= 2) return;
+      state.palette.splice(idx, 1);
+      _activeSwatch = -1;
+      renderPaletteUI();
+      clearActivePreset();
+      rerender();
+    });
+
+    wrap.appendChild(bg);
+    wrap.appendChild(rmBtn);
+
+    // Mobile: tap swatch to reveal × (tap again or outside to dismiss)
+    wrap.addEventListener('pointerdown', (e) => {
+      if (e.target === picker) return;
+      if (!window.matchMedia('(pointer: coarse)').matches) return;
+      e.preventDefault();
+      if (_activeSwatch === idx) {
+        _activeSwatch = -1;
+        document.querySelectorAll('.palette-swatch-wrap').forEach(w => w.classList.remove('touch-selected'));
+      } else {
+        _activeSwatch = idx;
+        document.querySelectorAll('.palette-swatch-wrap').forEach(w => w.classList.remove('touch-selected'));
+        if (N > 2) wrap.classList.add('touch-selected');
+        else picker.click(); // 2-colour: open picker directly
+      }
+    });
+
+    paletteRow.appendChild(wrap);
+  });
+
+  // + button (hidden at max 5)
+  if (N < 5) {
+    const addBtn = document.createElement('button');
+    addBtn.className   = 'palette-add';
+    addBtn.textContent = '+';
+    addBtn.title       = 'Add colour';
+    addBtn.addEventListener('click', () => {
+      state.palette.push('#808080');
+      _activeSwatch = -1;
+      renderPaletteUI();
+      clearActivePreset();
+      rerender();
+    });
+    paletteRow.appendChild(addBtn);
+  }
+
+  updatePaletteHex();
 }
 
-applySwatchBg(swatchInk,   state.inkColor);
-applySwatchBg(swatchPaper, state.paperColor);
+function updatePaletteHex() {
+  paletteHex.textContent = state.palette.join(' · ');
+}
 
-pickerInk.addEventListener('input', () => {
-  state.inkColor = pickerInk.value;
-  hexInk.textContent = pickerInk.value;
-  applySwatchBg(swatchInk, pickerInk.value);
-  rerender();
+// Dismiss touch-selected when tapping outside palette row
+document.addEventListener('pointerdown', (e) => {
+  if (!e.target.closest('.palette-swatch-wrap')) {
+    _activeSwatch = -1;
+    document.querySelectorAll('.palette-swatch-wrap').forEach(w => w.classList.remove('touch-selected'));
+  }
 });
 
-pickerPaper.addEventListener('input', () => {
-  state.paperColor = pickerPaper.value;
-  hexPaper.textContent = pickerPaper.value;
-  applySwatchBg(swatchPaper, pickerPaper.value);
-  rerender();
-});
+renderPaletteUI();
 
 // ── Events: input buttons
 btnUpload.addEventListener('click', () => fileInput.click());
