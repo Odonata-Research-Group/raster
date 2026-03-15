@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Floyd Steinberg</title>
   <meta name="description" content="Browser-based bitmap dithering tool. Drop an image, apply effects, download." />
+  <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAFxklEQVR4nLVXS2hTWxRd5/5qbpq0phURY7U1UmOtoBAxoh3ozOIHVHCoDqI4qIKIVRw5EMHfoE47FBw6iOBIRUUQFSpYacTQCKFQq9HUm9/9rTeQe1/TNLW+z4IzyD077LX/+wiSRBOQBEkIISCEaCb2ryAWIzCfzP9BQlroo+u6AIBUKoXDhw+jUqn43vjPwXlwXZckWSqV2NHRQQA8evQoSdKyrPniS4LjOLQsi47jNNw1JfD161d2d3czEAgQAEdGRkiSpmn+kXLbthe9b0rg58+fHBgYYDQapRCCuq5zfHyc5NI84bquL5fP53nx4kU+fvyYJOs80ZSAYRg8efIk9+7dy2AwSADs7e1lNpsl+csTruvScRz/uK5L13XrrH748CFXr15NALx+/XqDAQ0EPFiWxUuXLnHTpk3s6emhpmkEwGQyycnJyd96oFarcXh4mAAIgOvWreO3b998kh6UZlWgKAqq1Sra29uhaRqCwSA+fPiAd+/eIZlMYnh4GAcOHABJzM7OIhAIIBKJQFVVPHnyBFevXsXY2Bja2tqwceNGnDlzBpFIBI7jQJbl5lUw10U3btxgPB5nX18fdV33rfFOIBCgruuMRCKMx+Ps7+9nV1eXfy/LMpPJJG/dusVisdhgfVMPeKhUKshms2htbUW5XPa/K4oCWZZRqVR8Odu2YZomJElCLBZDLpcDABiGgbVr1yIcDsN1XUhSfetpSoAkisUiLMtCuVyGqqqwLAsAYNs2bNuuky2Xy9B1HYZhYGZmBpFIBKFQCCtWrEAikWjaSRck4PX+z58/gySq1So0TUMkEkGxWEQikcCJEyeQz+dx7949TE1NQZZldHR0wLIsFItFAECpVEJXVxdWrVrVtI03tGIvSdLpNNLpNDo7O9HW1ua7WlEUZDIZpNNpPwSapqFSqWBqagq1Wg2Dg4M4ffo0XNdFNpv1lXOhVj4/AR3HoW3b3L59O4UQlGWZwWCQfX19DIfDFEI0JKN3vLsLFy7w5cuXPHbsGIUQfPr0KcmFu2IdAU/g1atXBEBFUeoUhMNhhkIhyrLsn2ZkPPlAIMD9+/f7xs1HXQ54rlJVFZIk1SUa8CujXdf165gkVFX1Q6dpGiRJQktLC4QQqFarWLZsGX78+AHTNKFpWkMyLpiEoVAImqahWq1CCOHHzhvTjuP4st43AJBlGaVSCY7jwLIstLe3wzAMFAqFhvJbkICn6Pv37w3K52LNmjVIJBKYnJzE4OAgDMOAYRhQFAUTExN48+YNarUaZmdnYds2du3aBUVRYNs2FKXe5rpfHst4PI5oNIp8Pg9Jkny3r1y5EtPT00ilUti8eTMKhQJ0XUdPTw8ymQxisRiSySTu3r2Ls2fPQpIkSJKEVCoFAL/vA0IIuK6L1tZWxGIx5PP5uhKq1WpwHAcPHjzA+Pg4du7cic7OTmQyGdy/fx+7d+9GoVDA8+fPIcsyTNPEtWvXsG3btsYZMMftdfAqYd++fX4/x5zMXr58Oc+dO8c9e/bw06dPnJmZ4bNnzxiNRhmNRhkKhfyS3LJli78JzZ8BC5bhXAIvXryoK0VJkiiE4MDAAMfGxjg6Okry114wMTHBoaEhxuNxAvBHt7eALLYVLTgNvT9cuXKFAKiqqt9kuru7+f79+7plxHVdvn79mr29vWxpaSEAXr58+bfKmxKYu9UcPHiwgcTNmzd9Gdu2aZomDx065Ifp+PHjvvJmrl+UgEfCcRyWSiXu2LGjzrXr16/3ZUjy48ePvvJTp07RNM1F474kAuTfrXN6etqPr6qq1HWdb9++9RNsdHSUR44c4aNHj+oMWAoWJUD+HcN8Ps8NGzb4CXn79m1fZmhoyFe4FLf/EYG5JHK5HLdu3eoPmvPnz3NkZIS5XK5uDf8TLPlt6K1T1WoVd+7cwZcvX5BMJtHf3494PP6P345LJjCXxH+JPyIA/GrJ3jQUQkCSpH/1av4Ls6LQIFMGF10AAAAASUVORK5CYII=" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet" />
@@ -226,7 +227,27 @@
       margin-bottom: 12px;
       padding-bottom: 6px;
       border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
     }
+
+    .group-toggle {
+      font-size: 14px;
+      font-weight: 300;
+      color: var(--mid);
+      letter-spacing: 0;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+
+    .group-label:hover .group-toggle { color: var(--fg); }
+
+    .group.collapsed .group-label { margin-bottom: 0; }
+
+    .group.collapsed .group-body { display: none; }
 
     /* ── BUTTONS ── */
     .btn {
@@ -742,6 +763,10 @@
         padding-bottom: 8px;
       }
 
+      .group-toggle { font-size: 18px; }
+
+      .group.collapsed .group-label { margin-bottom: 0; }
+
       /* Param labels: Pattern, Scale, Threshold etc. */
       .param-name {
         font-size: 12px;
@@ -839,106 +864,115 @@
 
       <!-- INPUT -->
       <div class="group">
-        <div class="group-label">Input</div>
-        <button class="btn" id="btnUpload">↑ Upload Image</button>
-        <button class="btn" id="btnCamera">◉ Camera</button>
-        <button class="btn danger" id="btnClear" disabled>✕ Clear</button>
-        <input type="file" id="fileInput" accept="image/*" />
+        <div class="group-label" data-label="Input">Input<span class="group-toggle">−</span></div>
+        <div class="group-body">
+          <button class="btn" id="btnUpload">↑ Upload Image</button>
+          <button class="btn" id="btnCamera">◉ Camera</button>
+          <button class="btn danger" id="btnClear" disabled>✕ Clear</button>
+          <input type="file" id="fileInput" accept="image/*" />
+        </div>
       </div>
 
       <!-- PRESETS -->
       <div class="group">
-        <div class="group-label">Presets</div>
-        <button class="btn preset-btn" id="presetNewsprint">Newsprint</button>
-        <button class="btn preset-btn" id="presetZine">Zine</button>
-        <button class="btn preset-btn" id="presetGlitch">Glitch</button>
-        <button class="btn preset-btn" id="presetLoFi">Lo-Fi</button>
-        <button class="btn preset-btn" id="presetRaw">Raw</button>
+        <div class="group-label" data-label="Presets">Presets<span class="group-toggle">−</span></div>
+        <div class="group-body">
+          <button class="btn preset-btn" id="presetNewsprint">Newsprint</button>
+          <button class="btn preset-btn" id="presetZine">Zine</button>
+          <button class="btn preset-btn" id="presetGlitch">Glitch</button>
+          <button class="btn preset-btn" id="presetLoFi">Lo-Fi</button>
+          <button class="btn preset-btn" id="presetRaw">Raw</button>
+        </div>
       </div>
 
       <!-- EFFECT -->
       <div class="group">
-        <div class="group-label">Effect</div>
+        <div class="group-label" data-label="Effect">Effect<span class="group-toggle">−</span></div>
+        <div class="group-body">
 
-        <div class="param">
-          <div class="param-header">
-            <span class="param-name">Pattern</span>
+          <div class="param">
+            <div class="param-header">
+              <span class="param-name">Pattern</span>
+            </div>
+            <select id="selPattern">
+              <option value="bayer2">Bayer 2×2</option>
+              <option value="bayer4" selected>Bayer 4×4</option>
+              <option value="bayer8">Bayer 8×8</option>
+              <option value="halftone">Halftone</option>
+              <option value="noise">Noise</option>
+              <option value="floyd">Floyd-Steinberg</option>
+              <option value="atkinson">Atkinson</option>
+            </select>
           </div>
-          <select id="selPattern">
-            <option value="bayer2">Bayer 2×2</option>
-            <option value="bayer4" selected>Bayer 4×4</option>
-            <option value="bayer8">Bayer 8×8</option>
-            <option value="halftone">Halftone</option>
-            <option value="noise">Noise</option>
-            <option value="floyd">Floyd-Steinberg</option>
-            <option value="atkinson">Atkinson</option>
-          </select>
-        </div>
 
-        <div class="param">
-          <div class="param-header">
-            <span class="param-name">Scale</span>
-            <span class="param-val" id="valScale">2</span>
+          <div class="param">
+            <div class="param-header">
+              <span class="param-name">Scale</span>
+              <span class="param-val" id="valScale">2</span>
+            </div>
+            <input type="range" id="sldScale" min="1" max="8" value="2" step="1" />
           </div>
-          <input type="range" id="sldScale" min="1" max="8" value="2" step="1" />
-        </div>
 
-        <div class="param">
-          <div class="param-header">
-            <span class="param-name">Threshold</span>
-            <span class="param-val" id="valThreshold">0</span>
+          <div class="param">
+            <div class="param-header">
+              <span class="param-name">Threshold</span>
+              <span class="param-val" id="valThreshold">0</span>
+            </div>
+            <input type="range" id="sldThreshold" min="-128" max="128" value="0" step="1" />
           </div>
-          <input type="range" id="sldThreshold" min="-128" max="128" value="0" step="1" />
-        </div>
 
-        <div class="param">
-          <div class="param-header">
-            <span class="param-name">Contrast</span>
-            <span class="param-val" id="valContrast">1.0</span>
+          <div class="param">
+            <div class="param-header">
+              <span class="param-name">Contrast</span>
+              <span class="param-val" id="valContrast">1.0</span>
+            </div>
+            <input type="range" id="sldContrast" min="0.5" max="3" value="1" step="0.1" />
           </div>
-          <input type="range" id="sldContrast" min="0.5" max="3" value="1" step="0.1" />
-        </div>
 
-        <div class="param">
-          <div class="param-header">
-            <span class="param-name">Brightness</span>
-            <span class="param-val" id="valBrightness">0</span>
+          <div class="param">
+            <div class="param-header">
+              <span class="param-name">Brightness</span>
+              <span class="param-val" id="valBrightness">0</span>
+            </div>
+            <input type="range" id="sldBrightness" min="-100" max="100" value="0" step="1" />
           </div>
-          <input type="range" id="sldBrightness" min="-100" max="100" value="0" step="1" />
-        </div>
 
-        <div class="param">
-          <div class="param-header">
-            <span class="param-name">Blur</span>
-            <span class="param-val" id="valBlur">0</span>
+          <div class="param">
+            <div class="param-header">
+              <span class="param-name">Blur</span>
+              <span class="param-val" id="valBlur">0</span>
+            </div>
+            <input type="range" id="sldBlur" min="0" max="10" value="0" step="0.5" />
           </div>
-          <input type="range" id="sldBlur" min="0" max="10" value="0" step="0.5" />
-        </div>
 
-        <div class="param">
-          <div class="param-header">
-            <span class="param-name">Pixelate</span>
-            <span class="param-val" id="valPixelate">1</span>
+          <div class="param">
+            <div class="param-header">
+              <span class="param-name">Pixelate</span>
+              <span class="param-val" id="valPixelate">1</span>
+            </div>
+            <input type="range" id="sldPixelate" min="1" max="20" value="1" step="1" />
           </div>
-          <input type="range" id="sldPixelate" min="1" max="20" value="1" step="1" />
-        </div>
 
-        <div class="param">
-          <div class="param-header">
-            <span class="param-name">Scatter</span>
-            <span class="param-val" id="valScatter">0</span>
+          <div class="param">
+            <div class="param-header">
+              <span class="param-name">Scatter</span>
+              <span class="param-val" id="valScatter">0</span>
+            </div>
+            <input type="range" id="sldScatter" min="0" max="5" value="0" step="1" />
           </div>
-          <input type="range" id="sldScatter" min="0" max="5" value="0" step="1" />
-        </div>
 
-        <div class="toggle-row">
-          <span class="toggle-label">Invert</span>
-          <div class="toggle" id="togInvert"></div>
-        </div>
+          <div class="toggle-row">
+            <span class="toggle-label">Invert</span>
+            <div class="toggle" id="togInvert"></div>
+          </div>
 
-        <!-- COLOUR -->
-        <div style="margin-top: 16px;">
-          <div class="group-label">Colour</div>
+        </div>
+      </div>
+
+      <!-- COLOUR -->
+      <div class="group">
+        <div class="group-label" data-label="Colour">Colour<span class="group-toggle">−</span></div>
+        <div class="group-body">
 
           <div class="colour-row">
             <span class="colour-label">Ink</span>
@@ -959,17 +993,19 @@
               <span class="colour-hex" id="hexPaper">#000000</span>
             </div>
           </div>
-        </div>
 
+        </div>
       </div>
 
       <!-- EXPORT -->
       <div class="group">
-        <div class="group-label">Export</div>
-        <button class="btn export-btn" id="btnPNG" disabled>↓ PNG</button>
-        <button class="btn export-btn" id="btnJPG" disabled>↓ JPG</button>
-        <button class="btn export-btn" id="btnSVG" disabled>↓ SVG</button>
-        <button class="btn export-btn" id="btnGIF" disabled>↓ GIF</button>
+        <div class="group-label" data-label="Export">Export<span class="group-toggle">−</span></div>
+        <div class="group-body">
+          <button class="btn export-btn" id="btnPNG" disabled>↓ PNG</button>
+          <button class="btn export-btn" id="btnJPG" disabled>↓ JPG</button>
+          <button class="btn export-btn" id="btnSVG" disabled>↓ SVG</button>
+          <button class="btn export-btn" id="btnGIF" disabled>↓ GIF</button>
+        </div>
       </div>
 
       <!-- FOOTER LINKS -->
@@ -1987,6 +2023,16 @@ canvasWrap.addEventListener('pointerdown', (e) => {
     resetZoom();
   }
   lastTap = now;
+});
+
+// ── Collapsible sections
+document.querySelectorAll('.group > .group-label').forEach(label => {
+  const group  = label.parentElement;
+  const toggle = label.querySelector('.group-toggle');
+  label.addEventListener('click', () => {
+    const collapsed = group.classList.toggle('collapsed');
+    toggle.textContent = collapsed ? '+' : '−';
+  });
 });
 
 // ── Init
