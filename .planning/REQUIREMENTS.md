@@ -158,23 +158,76 @@
 
 ---
 
-## V2.7 (Next)
+## V2.7 (Shipped)
 
 ### Presets
-- [ ] 5 named one-tap presets — positioned below Input, above Effect
-- [ ] Preset group uses standard `.btn` style — no new UI patterns
-- [ ] Active state: `.active` class on selected preset, clears on any manual slider adjustment
-- [ ] Starting set: Newsprint, Zine, Glitch, Lo-Fi, Raw
+- [x] 5 named one-tap presets — positioned below Input, above Effect
+- [x] Preset group uses standard `.btn` style — no new UI patterns
+- [x] Active state: `.active` class on selected preset, clears on any manual slider adjustment
+- [x] Set: Newsprint, Zine, Glitch, Lo-Fi, Raw
+- [x] Each preset defines its own ink/paper colours — resets palette to 2-colour pair on apply
 
 ---
 
-## V2.8
+## V2.8 (Shipped)
 
 ### UI
-- [ ] Collapsible sidebar sections — `+` / `−` toggle at far right of each group label
-- [ ] All sections open by default
-- [ ] Collapsed state persists via localStorage
-- [ ] Dithered modal background — canvas-generated Bayer pattern behind About text
+- [x] Collapsible sidebar sections — `+` / `−` toggle at far right of each group label
+- [x] All sections open by default
+- [x] Collapsed state persists via localStorage
+
+---
+
+## V2.9 (Shipped)
+
+### Dither — new algorithms
+- [x] Jarvis-Judice-Ninke error diffusion
+- [x] Stucki error diffusion
+- [x] Ostromoukhov variable-weight error diffusion
+
+### Halftone
+- [x] True AM Halftone — replaces old circular threshold, rotated dot grid, luminance-driven dot radius
+- [x] Dot Size slider (2–20, default 6) — visible always, param-disabled when pattern ≠ Halftone
+- [x] Screen Angle slider (0–90°, default 45°) — visible always, param-disabled when pattern ≠ Halftone
+
+### Pattern dropdown order
+- [x] Bayer 2×2, Bayer 4×4, Bayer 8×8, Halftone, Noise, Floyd-Steinberg, Atkinson, Jarvis-Judice-Ninke, Stucki, Ostromoukhov
+
+---
+
+## V2.10 (Shipped)
+
+### Engine — N-colour palette dithering
+- [x] `state.palette` array replaces `state.inkColor` / `state.paperColor` as source of truth
+- [x] `inkColor` and `paperColor` kept as getter/setter aliases — backwards compatibility with presets, export, status bar
+- [x] Error diffusion (all 5 algorithms): RGB vector error propagation, nearest palette colour by Euclidean distance
+- [x] Ordered dither (Bayer, Noise, Halftone): luminance-mapped palette snap via `orderedSnap()`
+- [x] 2-colour output identical to V2.9 — no regression
+- [x] Invert reverses palette array — works correctly with N colours
+
+### Palette UI
+- [x] Replaces fixed Ink / Paper rows in Colour section
+- [x] Dynamic swatch row — 2 swatches default, `+` adds up to 5
+- [x] `+` button: 20×20px dashed border, hidden at palette length 5
+- [x] Remove affordance: 11×11px `×` badge top-right of each swatch
+- [x] `×` hidden on last two swatches — minimum 2 enforced
+- [x] Desktop: `×` revealed on swatch hover (CSS only)
+- [x] Mobile: tap swatch to reveal `×`; tap outside to dismiss; 2-colour mode taps open picker directly
+- [x] Mobile swatches: 20×20px → 28×28px
+- [x] Hex readout: single line below row, colours joined by ` · `
+
+### Export — SVG multi-colour
+- [x] One `<g fill="...">` per palette slot (excluding last slot)
+- [x] Last palette slot = background rect
+- [x] Nearest-index lookup mirrors dither engine — SVG matches canvas output
+
+---
+
+## V2.11 (Next)
+
+### Engine
+- [ ] LAB/HSL colour-accurate error calculation — replace RGB Euclidean distance with perceptual colour space distance function
+- [ ] Engine-only change — no UI additions, no regression on existing behaviour
 
 ---
 
@@ -186,9 +239,14 @@
 
 ### Colour
 - [ ] Colour output mode selector (Mono / Tonal / Palette / RGB / Original)
+- [ ] Palette extraction from image
+
+### Effects
+- [ ] Temporal / animated dithering
 
 ### UI
 - [ ] Side-by-side before/after view
+- [ ] Landing page
 
 ---
 

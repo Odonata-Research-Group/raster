@@ -6,7 +6,7 @@ Floyd Steinberg is a browser-based image dithering tool. Drop in a photo, apply 
 
 **Live:** https://floydsteinberg.art
 **Instagram:** @floydsteinberg
-**Status:** V2.6 shipped — bitmap dither, camera input, colour output, GIF/PNG/JPG/SVG export, brightness/blur/pixelate/scatter controls, full mobile support, pinch-to-zoom, analytics
+**Status:** V2.10 shipped — bitmap dither, camera input, N-colour palette dithering, GIF/PNG/JPG/SVG export, brightness/blur/pixelate/scatter controls, full mobile support, pinch-to-zoom, presets, collapsible sidebar, analytics
 
 ## Why does it exist?
 
@@ -32,7 +32,7 @@ Immediate. Tactile. Like a darkroom tool that runs in the browser. The aesthetic
 
 ## Aesthetic principles
 
-- Monochromatic foundation — black/white default, two-colour output supported
+- Monochromatic foundation — black/white default, N-colour palette (2–5 colours) supported from V2.10
 - IBM Plex Mono typography throughout
 - Swiss grid discipline — 8px base unit
 - No decoration, no gradients, no shadows
@@ -64,15 +64,20 @@ Named after Robert W. Floyd and Louis Steinberg, who published "An Adaptive Algo
 
 ## Roadmap
 
-### V2.7 (next)
-- Presets — 5 named one-tap starting points (Newsprint, Zine, Glitch, Lo-Fi, Raw), positioned below Input above Effect
-- Goal: get new users to an exciting result in one tap, not 3 minutes of slider exploration
+### Shipped
+- V2.7: Presets — Newsprint, Zine, Glitch, Lo-Fi, Raw
+- V2.8: Collapsible sidebar sections
+- V2.9: Jarvis-Judice-Ninke, Stucki, Ostromoukhov error diffusion + true AM Halftone (rotated dot grid, Dot Size + Screen Angle controls)
+- V2.10: N-colour palette dithering engine — RGB vector error propagation, dynamic palette UI (2–5 colours), SVG multi-colour export
 
-### V2.8
-- Collapsible sidebar sections — all open by default, user can collapse, state persists via localStorage
-- Dithered modal background — canvas-generated Bayer pattern behind About text
+### V2.11 (next)
+- LAB/HSL colour-accurate error calculation — upgrade the distance function and error propagation from RGB to perceptual colour space
+- Engine-only change, no UI additions
 
 ### V3
 - Gallery / settings share — export image with settings baked in, or URL-encoded state for sharing exact recipes
 - MP4 export via WebCodecs + mp4-muxer (Instagram-compatible H.264)
 - Mode selector: Mono / Tonal / Palette / RGB / Original
+- Palette extraction from image
+- Temporal / animated dithering
+- Landing page

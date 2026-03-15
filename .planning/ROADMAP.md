@@ -66,28 +66,55 @@
 
 ---
 
-## Milestone 7 — Presets (next)
-- [ ] 5 named one-tap presets: Newsprint, Zine, Glitch, Lo-Fi, Raw
-- [ ] Positioned below Input, above Effect — follows workflow order
-- [ ] Active state clears on any manual slider adjustment
+## Milestone 7 — Presets ✓
+- [x] 5 named one-tap presets: Newsprint, Zine, Glitch, Lo-Fi, Raw
+- [x] Positioned below Input, above Effect — follows workflow order
+- [x] Active state clears on any manual slider adjustment
+- [x] Each preset defines its own ink/paper colours — resets palette to 2-colour pair on apply
 
 ---
 
-## Milestone 8 — Polish + UI
-- [ ] Collapsible sidebar sections — `+` / `−` per group, state persists via localStorage, all open by default
-- [ ] Dithered modal background — canvas-generated Bayer pattern behind About text
+## Milestone 8 — Polish + new algorithms ✓
+- [x] Collapsible sidebar sections — `+` / `−` per group, state persists via localStorage, all open by default
+- [x] Jarvis-Judice-Ninke error diffusion
+- [x] Stucki error diffusion
+- [x] Ostromoukhov variable-weight error diffusion
+- [x] True AM Halftone — rotated dot grid, luminance-driven dot radius
+- [x] Dot Size + Screen Angle controls — param-disabled when pattern ≠ Halftone
 
 ---
 
-## Milestone 9 — Share + expand
+## Milestone 9 — N-colour palette dithering ✓
+- [x] Engine upgraded from binary ink/paper snap to N-colour RGB vector error propagation
+- [x] All 5 error diffusion algorithms unified into single RGB pass
+- [x] Ordered dither (Bayer, Noise, Halftone) use luminance-mapped palette snap
+- [x] 2-colour output identical to previous — no regression
+- [x] Dynamic palette UI — 2 swatches default, `+` adds up to 5, `×` removes (minimum 2)
+- [x] Desktop hover reveal / mobile tap-to-select for remove affordance
+- [x] Hex readout below swatch row
+- [x] SVG export updated — one `<g>` per ink slot, last slot = background rect
+- [x] Invert reverses palette array — works correctly with N colours
+
+---
+
+## Milestone 10 — Perceptual colour (next)
+- [ ] LAB/HSL colour-accurate error calculation — replace RGB Euclidean distance with perceptual colour space distance function
+- [ ] Engine-only change — no UI additions
+
+---
+
+## Milestone 11 — Share + expand
 - [ ] Gallery / settings share — export image with settings baked in, or URL-encoded state for sharing exact recipes
 - [ ] MP4 export — WebCodecs API + mp4-muxer, H.264 output, Instagram compatible
 - [ ] Colour output mode selector (Mono / Tonal / Palette / RGB / Original)
+- [ ] Palette extraction from image
+- [ ] Temporal / animated dithering
 - [ ] Side-by-side before/after view
+- [ ] Landing page
 
 ---
 
-## Milestone 10 — Platform
+## Milestone 12 — Platform
 - [ ] Blue noise dithering
 - [ ] Line screen / horizontal scan pattern
 - [ ] Second effect (ASCII or halftone as standalone)

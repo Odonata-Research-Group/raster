@@ -113,11 +113,12 @@
 - Worker URL cached in `gifWorkerUrl` variable — fetch only happens once per session
 - For camera GIF capture: worker is pre-fetched before the 3-second recording window starts, so encoding fires immediately when recording ends
 
-## SVG export (V2.5, shipped)
+## SVG export (V2.5, shipped; updated V2.10)
 - Approach: rect-per-pixel at dithered resolution — one `<rect x y width height />` per ink pixel
 - viewBox set to dithered dimensions (e.g. 400×300 at Scale 2 on an 800×600 image) — infinitely scalable
 - `shape-rendering="crispEdges"` — keeps output pixel-sharp at any zoom in Figma/Illustrator
-- Paper colour fills a background rect; ink colour fills all dot rects — both respect current Colour controls
+- V2.5: paper colour fills a background rect; ink colour fills all dot rects
+- V2.10 update: last palette slot = background rect; all other slots each get one `<g fill="...">` containing only their ink pixels — scales naturally to N colours
 - Resolution cap: if dithered pixel count exceeds 640,000, user is warned before generating — at that size files exceed ~18MB
 - Use case: screen printing, laser cutting, editorial, merch — any context requiring scalable bitmap art
 - Decided against path-tracing (merging adjacent rects into paths) — different project, not needed for intended use
@@ -160,14 +161,15 @@
 - Fixed to `var(--fg)` — pure white in dark mode, pure black in light mode
 - Modal title was already `var(--fg)` — body now consistent with it
 
-## Presets (decided, V2.7)
+## Presets (V2.7, shipped; updated V2.10)
 - Sidebar position: below Input group, above Effect group — order follows workflow logic (load → starting point → tune)
 - Implementation: standard `.btn` buttons in a `PRESETS` group — zero new UI patterns introduced
 - Active state: selected preset highlights with `.active` class; clears automatically when user manually adjusts any slider (signals "custom territory")
-- Proposed starting set: Newsprint (Bayer 4×4, Scale 3, high contrast), Zine (Atkinson, Scale 2, pushed threshold), Glitch (Noise, Scale 1, inverted), Lo-Fi (Bayer 8×8, Scale 4, soft contrast), Raw (Floyd-Steinberg, Scale 1, neutral)
+- Set: Newsprint (Bayer 4×4, Scale 3, high contrast), Zine (Atkinson, Scale 2, pushed threshold), Glitch (Noise, Scale 1, inverted), Lo-Fi (Bayer 8×8, Scale 4, soft contrast), Raw (Floyd-Steinberg, Scale 1, neutral)
 - Rationale: new users need a fast path to a result they're excited about — presets get them there in one tap instead of 3 minutes of slider exploration
+- V2.10: presets reset palette to their defined 2-colour ink/paper pair — intentional, presets are opinionated looks, multi-colour is a manual creative choice
 
-## Collapsible sidebar sections (decided, V2.8)
+## Collapsible sidebar sections (V2.8, shipped)
 - All sections open by default — no hidden complexity for new users
 - User can collapse any section via `+` / `−` toggle at far right of group label
 - State persists via localStorage — collapsed sections stay collapsed across sessions
@@ -178,6 +180,43 @@
 - About modal background to be replaced with a canvas-generated Bayer dither pattern
 - Rationale: makes the About page feel like it belongs to the tool rather than being a generic overlay; strong for Instagram screenshots of the tool itself
 - To be specced properly in V2.8
+
+## N-colour palette dithering (V2.10, shipped)
+- Engine upgraded from 2-colour (ink/paper binary snap) to N-colour (2–5 colours, RGB vector error propagation)
+- `state.palette` array is now the source of truth — replaces `state.inkColor` / `state.paperColor` as separate values
+- `state.inkColor` and `state.paperColor` kept as getter/setter aliases pointing to `palette[0]` and `palette[last]` — all existing preset, export, and status bar logic unchanged
+- 2-colour output is bit-for-bit identical to V2.9 — no regression
+
+### Engine: error diffusion algorithms
+- All five error diffusion patterns (Floyd-Steinberg, Atkinson, Jarvis-Judice-Ninke, Stucki, Ostromoukhov) unified into a single RGB vector pass — replaces five separate grayscale implementations
+- Snap step: nearest palette colour by RGB Euclidean distance, not a binary threshold
+- Error propagated as an [R, G, B] vector using the same kernel weights as before — algorithm behaviour unchanged, colour space expanded
+
+### Engine: ordered dither patterns
+- Bayer (2×2, 4×4, 8×8), Noise, and Halftone use a luminance-mapped palette snap
+- `orderedSnap(lum, threshNorm)` maps luminance to a position in the palette sorted by luminance, using the threshold value to decide between adjacent palette entries
+- With 2 colours, output is identical to V2.9
+
+### Invert with N colours
+- Invert reverses the palette array before passing to the dither engine — palette order flips, re-render fires
+- In SVG export, invert reversal is applied before determining background slot — consistent behaviour
+
+### Palette UI
+- Replaces fixed Ink / Paper rows in the Colour section
+- Dynamic swatch row: 2 swatches by default, `+` button adds up to 5
+- `+` button: 20×20px dashed border, hidden when palette length = 5
+- Remove affordance: 11×11px `×` badge top-right of each swatch, hidden on last two swatches (minimum 2 enforced)
+- Desktop: `×` revealed on swatch hover (`.removable` class, CSS only)
+- Mobile: tap swatch to reveal `×` (touch-selected state); tap outside to dismiss; on 2-colour palette, tap opens picker directly — no remove affordance shown
+- Hex readout: single line below the swatch row, all current colours joined by ` · ` (e.g. `#0a0a0a · #c83c28 · #f5f0e8`)
+- Mobile swatches: 20×20px → 28×28px in `@media (max-width: 480px)`
+- Palette order matters — palette[0] is conventionally darkest (ink), palette[last] is conventionally lightest (paper/background); not enforced, user's responsibility
+
+### SVG export with N colours
+- One `<g fill="...">` per palette slot, excluding the last slot
+- Last slot = background rect — fills the full SVG canvas
+- Nearest-palette-index lookup mirrors the dither engine — SVG faithfully represents what the canvas shows
+- Background rule: last slot is always background regardless of its colour value — user controls this by palette order; Invert toggle effectively swaps which end is background
 
 ## Gallery / settings share (backlog, to be specced)
 - Idea: export an image with current settings baked into it — shareable output that communicates how a result was made
