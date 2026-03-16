@@ -1099,6 +1099,18 @@
       <div class="group">
         <div class="group-label" data-label="Colour">Colour<span class="group-toggle">−</span></div>
         <div class="group-body">
+          <div class="colour-row">
+            <span class="colour-label">Canvas</span>
+            <div class="colour-input-wrap">
+              <div class="colour-swatch" id="canvasSwatch" style="background:#ffffff">
+                <input type="color" id="canvasColorInput" value="#ffffff" />
+              </div>
+              <span class="colour-hex" id="canvasColorHex">#FFFFFF</span>
+            </div>
+          </div>
+          <div class="colour-row" style="margin-bottom:6px">
+            <span class="colour-label">Ink</span>
+          </div>
           <div class="palette-row" id="paletteRow"></div>
           <div class="palette-hex" id="paletteHex"></div>
         </div>
@@ -1180,11 +1192,8 @@ const state = {
   dotSize: 6,
   screenAngle: 45,
   pattern: 'bayer4',
-  palette: ['#ffffff', '#000000'],
-  get inkColor()    { return this.palette[0]; },
-  set inkColor(v)   { this.palette[0] = v; },
-  get paperColor()  { return this.palette[this.palette.length - 1]; },
-  set paperColor(v) { this.palette[this.palette.length - 1] = v; },
+  palette: ['#000000'],
+  canvasColor: '#ffffff',
   cameraStream: null,
   rafId: null,
   frameW: 0,
@@ -1349,32 +1358,38 @@ function dither(imageData, w, h) {
   const out = ctx.createImageData(ow, oh);
   const dst = out.data;
 
-  // Palette — invert is handled upstream as a pixel pre-processing step
-  const pal    = [...state.palette];
-  const palRgb = pal.map(hexToRgb);
-  const N      = palRgb.length;
+  // Palette — ink colours + canvas colour as implicit background
+  // Invert is handled upstream as a pixel pre-processing step
+  const inkPal     = state.palette.map(hexToRgb);
+  const canvasRgb  = hexToRgb(state.canvasColor);
+  const effectivePal = [...inkPal, canvasRgb];
+  const N          = effectivePal.length;
+  const CANVAS_IDX = inkPal.length; // canvas colour is always the last entry
 
-  // Palette sorted by luminance — used by ordered dithering
-  const palByLum = [...palRgb].sort((a, b) => rgbLum(a) - rgbLum(b));
+  // effectivePal indices sorted by luminance — used by ordered dithering
+  const palByLumIdx = effectivePal
+    .map((c, i) => ({ c, i }))
+    .sort((a, b) => rgbLum(a.c) - rgbLum(b.c))
+    .map(x => x.i);
 
-  // Nearest palette colour by RGB Euclidean distance — error diffusion snap
-  function nearestRGB(r, g, b) {
-    let minD = Infinity, best = palRgb[0];
-    for (const c of palRgb) {
+  // Nearest index into effectivePal by RGB Euclidean distance
+  function nearestIdx(r, g, b) {
+    let minD = Infinity, best = 0;
+    for (let k = 0; k < N; k++) {
+      const c = effectivePal[k];
       const d = (r - c[0]) ** 2 + (g - c[1]) ** 2 + (b - c[2]) ** 2;
-      if (d < minD) { minD = d; best = c; }
+      if (d < minD) { minD = d; best = k; }
     }
     return best;
   }
 
-  // Ordered dither: map lum [0..255] + normalised threshold [0..1] → palette entry
-  // With 2 colours behaves identically to the previous binary snap
-  function orderedSnap(lum, threshNorm) {
+  // Ordered dither: map lum [0..255] + normalised threshold [0..1] → effectivePal index
+  function orderedSnapIdx(lum, threshNorm) {
     const t  = Math.max(0, Math.min(N - 1, lum / 255 * (N - 1)));
     const lo = Math.floor(t);
     const hi = Math.min(lo + 1, N - 1);
-    if (lo === hi) return palByLum[lo];
-    return (t - lo) > threshNorm ? palByLum[hi] : palByLum[lo];
+    if (lo === hi) return palByLumIdx[lo];
+    return (t - lo) > threshNorm ? palByLumIdx[hi] : palByLumIdx[lo];
   }
 
   // ── Error diffusion (Floyd-Steinberg, Atkinson, Jarvis, Stucki, Ostromoukhov)
@@ -1403,9 +1418,11 @@ function dither(imageData, w, h) {
       for (let px = 0; px < ow; px++) {
         const i            = py * ow + px;
         const r = rBuf[i], g = gBuf[i], b = bBuf[i];
-        const [nr, ng, nb] = nearestRGB(r, g, b);
+        const idx          = nearestIdx(r, g, b);
+        const [nr, ng, nb] = effectivePal[idx];
         rBuf[i] = nr; gBuf[i] = ng; bBuf[i] = nb;
-        dst[i * 4] = nr; dst[i * 4 + 1] = ng; dst[i * 4 + 2] = nb; dst[i * 4 + 3] = 255;
+        dst[i * 4] = nr; dst[i * 4 + 1] = ng; dst[i * 4 + 2] = nb;
+        dst[i * 4 + 3] = idx === CANVAS_IDX ? 0 : 255;
 
         const er = r - nr, eg = g - ng, eb = b - nb;
 
@@ -1479,9 +1496,11 @@ function dither(imageData, w, h) {
         // dotPos: 1 = cell centre (darkest/ink), 0 = cell edge (lightest/paper)
         const dotPos = Math.max(0, 1 - (dist / maxR) ** 2);
 
-        const col = orderedSnap(lum, dotPos);
+        const idx = orderedSnapIdx(lum, dotPos);
+        const col = effectivePal[idx];
         const di  = (py * ow + px) * 4;
-        dst[di]   = col[0]; dst[di + 1] = col[1]; dst[di + 2] = col[2]; dst[di + 3] = 255;
+        dst[di] = col[0]; dst[di + 1] = col[1]; dst[di + 2] = col[2];
+        dst[di + 3] = idx === CANVAS_IDX ? 0 : 255;
       }
     }
     return { imageData: out, ow, oh };
@@ -1508,9 +1527,11 @@ function dither(imageData, w, h) {
         ? Math.random()
         : mat[py % mSize][px % mSize] / mMax;
 
-      const col = orderedSnap(lum, threshNorm);
+      const idx = orderedSnapIdx(lum, threshNorm);
+      const col = effectivePal[idx];
       const di  = (py * ow + px) * 4;
-      dst[di]   = col[0]; dst[di + 1] = col[1]; dst[di + 2] = col[2]; dst[di + 3] = 255;
+      dst[di] = col[0]; dst[di + 1] = col[1]; dst[di + 2] = col[2];
+      dst[di + 3] = idx === CANVAS_IDX ? 0 : 255;
     }
   }
 
@@ -1597,6 +1618,10 @@ function render(sourceBitmap) {
   const tCtx = tmp.getContext('2d');
   tCtx.putImageData(dithered, 0, 0);
 
+  // Fill canvas with canvas colour, then composite dithered result on top
+  // (pixels that snapped to canvas colour are transparent, so they fall through)
+  ctx.fillStyle = state.canvasColor;
+  ctx.fillRect(0, 0, fitW, fitH);
   ctx.drawImage(tmp, 0, 0, fitW, fitH);
 
   state.frameW = fitW;
@@ -1838,25 +1863,28 @@ function downloadSVG() {
   const cw = canvas.width;
   const ch = canvas.height;
 
-  // Palette — canvas pixels already have invert applied (pixel pre-processing in render())
-  const pal    = [...state.palette];
-  const palRgb = pal.map(hexToRgb);
-  const N      = palRgb.length;
-  const bgHex  = pal[N - 1];  // last slot = background
+  // Palette — ink colours + canvas colour as background
+  const inkPal      = state.palette;
+  const inkPalRgb   = inkPal.map(hexToRgb);
+  const canvasRgb   = hexToRgb(state.canvasColor);
+  const bgHex       = state.canvasColor;
+  const svgPal      = [...inkPalRgb, canvasRgb];
+  const svgN        = svgPal.length;
+  const SVG_CANVAS  = inkPalRgb.length; // index of canvas in svgPal
 
-  // Find nearest palette index by RGB distance
+  // Find nearest palette index (ink + canvas) by RGB distance
   function nearestIdx(r, g, b) {
     let minD = Infinity, best = 0;
-    for (let k = 0; k < N; k++) {
-      const c = palRgb[k];
+    for (let k = 0; k < svgN; k++) {
+      const c = svgPal[k];
       const dist = (r - c[0]) ** 2 + (g - c[1]) ** 2 + (b - c[2]) ** 2;
       if (dist < minD) { minD = dist; best = k; }
     }
     return best;
   }
 
-  // Collect rect strings per palette slot (background slot excluded)
-  const groups = Array.from({ length: N - 1 }, () => []);
+  // Collect rect strings per ink slot — canvas pixels fall to background rect
+  const groups = Array.from({ length: inkPal.length }, () => []);
 
   for (let py = 0; py < oh; py++) {
     for (let px = 0; px < ow; px++) {
@@ -1864,14 +1892,14 @@ function downloadSVG() {
       const sy  = Math.min(Math.round(py * scale + scale / 2), ch - 1);
       const i   = (sy * cw + sx) * 4;
       const idx = nearestIdx(d[i], d[i + 1], d[i + 2]);
-      if (idx < N - 1) {
+      if (idx < SVG_CANVAS) {
         groups[idx].push(`<rect x="${px}" y="${py}" width="1" height="1"/>`);
       }
     }
   }
 
   const gTags = groups
-    .map((rects, k) => rects.length ? `<g fill="${pal[k]}">${rects.join('')}</g>` : '')
+    .map((rects, k) => rects.length ? `<g fill="${inkPal[k]}">${rects.join('')}</g>` : '')
     .join('\n');
 
   const svg = [
@@ -1905,11 +1933,11 @@ function downloadCanvas(type, quality) {
 
 // ── Presets
 const PRESETS = {
-  newsprint: { pattern: 'bayer4',   scale: 3, threshold: 10, contrast: 1.4, brightness:   0, blur: 1, pixelate: 1, scatter: 0, invert: false, inkColor: '#1a1a1a', paperColor: '#f0ead6' },
-  zine:      { pattern: 'atkinson', scale: 2, threshold: 20, contrast: 1.6, brightness: -10, blur: 0, pixelate: 1, scatter: 0, invert: false, inkColor: '#0a0a0a', paperColor: '#f5f0e8' },
-  glitch:    { pattern: 'noise',    scale: 1, threshold:  0, contrast: 1.8, brightness:   0, blur: 0, pixelate: 1, scatter: 3, invert: true,  inkColor: '#ffffff', paperColor: '#000000' },
-  lofi:      { pattern: 'bayer8',   scale: 4, threshold:  0, contrast: 1.2, brightness: -20, blur: 2, pixelate: 1, scatter: 0, invert: false, inkColor: '#0a0a0a', paperColor: '#d9d9d9' },
-  raw:       { pattern: 'floyd',    scale: 1, threshold:  0, contrast: 1.0, brightness:   0, blur: 0, pixelate: 1, scatter: 0, invert: false, inkColor: '#ffffff', paperColor: '#000000' },
+  newsprint: { pattern: 'bayer4',   scale: 3, threshold: 10, contrast: 1.4, brightness:   0, blur: 1, pixelate: 1, scatter: 0, invert: false, canvasColor: '#f0ead6', palette: ['#1a1a1a'] },
+  zine:      { pattern: 'atkinson', scale: 2, threshold: 20, contrast: 1.6, brightness: -10, blur: 0, pixelate: 1, scatter: 0, invert: false, canvasColor: '#f5f0e8', palette: ['#0a0a0a'] },
+  glitch:    { pattern: 'noise',    scale: 1, threshold:  0, contrast: 1.8, brightness:   0, blur: 0, pixelate: 1, scatter: 3, invert: true,  canvasColor: '#000000', palette: ['#ffffff'] },
+  lofi:      { pattern: 'bayer8',   scale: 4, threshold:  0, contrast: 1.2, brightness: -20, blur: 2, pixelate: 1, scatter: 0, invert: false, canvasColor: '#d9d9d9', palette: ['#0a0a0a'] },
+  raw:       { pattern: 'floyd',    scale: 1, threshold:  0, contrast: 1.0, brightness:   0, blur: 0, pixelate: 1, scatter: 0, invert: false, canvasColor: '#000000', palette: ['#ffffff'] },
 };
 
 function clearActivePreset() {
@@ -1953,8 +1981,10 @@ function applyPreset(name, btn) {
   clearActivePreset();
   btn.classList.add('active');
 
-  // Reset palette to preset's 2-colour definition
-  state.palette = [p.inkColor, p.paperColor];
+  // Apply canvas colour + ink palette
+  state.canvasColor = p.canvasColor;
+  state.palette = [...p.palette];
+  updateCanvasColorUI();
   renderPaletteUI();
 
   updateHalftoneControls();
@@ -2064,7 +2094,7 @@ function renderPaletteUI() {
 
   state.palette.forEach((hex, idx) => {
     const wrap = document.createElement('div');
-    wrap.className = 'palette-swatch-wrap' + (N > 2 ? ' removable' : '');
+    wrap.className = 'palette-swatch-wrap' + (N > 1 ? ' removable' : '');
 
     const bg = document.createElement('div');
     bg.className = 'palette-swatch-bg';
@@ -2091,7 +2121,7 @@ function renderPaletteUI() {
     rmBtn.title       = 'Remove';
     rmBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      if (state.palette.length <= 2) return;
+      if (state.palette.length <= 1) return;
       state.palette.splice(idx, 1);
       _activeSwatch = -1;
       renderPaletteUI();
@@ -2113,8 +2143,8 @@ function renderPaletteUI() {
       } else {
         _activeSwatch = idx;
         document.querySelectorAll('.palette-swatch-wrap').forEach(w => w.classList.remove('touch-selected'));
-        if (N > 2) wrap.classList.add('touch-selected');
-        else picker.click(); // 2-colour: open picker directly
+        if (N > 1) wrap.classList.add('touch-selected');
+        else picker.click(); // 1-colour: open picker directly
       }
     });
 
@@ -2154,6 +2184,25 @@ document.addEventListener('pointerdown', (e) => {
 });
 
 renderPaletteUI();
+
+// ── Canvas colour control
+const canvasColorInput = document.getElementById('canvasColorInput');
+const canvasColorHex   = document.getElementById('canvasColorHex');
+const canvasSwatch     = document.getElementById('canvasSwatch');
+
+function updateCanvasColorUI() {
+  canvasColorInput.value        = state.canvasColor;
+  canvasSwatch.style.background = state.canvasColor;
+  canvasColorHex.textContent    = state.canvasColor.toUpperCase();
+}
+
+canvasColorInput.addEventListener('input', () => {
+  state.canvasColor             = canvasColorInput.value;
+  canvasSwatch.style.background = canvasColorInput.value;
+  canvasColorHex.textContent    = canvasColorInput.value.toUpperCase();
+  clearActivePreset();
+  rerender();
+});
 
 // ── Events: input buttons
 btnUpload.addEventListener('click', () => fileInput.click());
