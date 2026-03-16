@@ -1358,9 +1358,13 @@ function dither(imageData, w, h) {
   const dst = out.data;
 
   // Palette — ink colours + canvas colour as implicit background
-  // Invert is handled upstream as a pixel pre-processing step
-  const inkPal     = state.palette.map(hexToRgb);
-  const canvasRgb  = hexToRgb(state.canvasColor);
+  // When invert is active, mirror palette entries so inverted pixels still
+  // snap to the correct palette slot (canvas stays canvas, ink stays ink)
+  function maybeInvert(c) {
+    return state.invert ? [255 - c[0], 255 - c[1], 255 - c[2]] : c;
+  }
+  const inkPal     = state.palette.map(hexToRgb).map(maybeInvert);
+  const canvasRgb  = maybeInvert(hexToRgb(state.canvasColor));
   const effectivePal = [...inkPal, canvasRgb];
   const N          = effectivePal.length;
   const CANVAS_IDX = inkPal.length; // canvas colour is always the last entry
@@ -1619,7 +1623,13 @@ function render(sourceBitmap) {
 
   // Fill canvas with canvas colour, then composite dithered result on top
   // (pixels that snapped to canvas colour are transparent, so they fall through)
-  ctx.fillStyle = state.canvasColor;
+  // When invert is active, fill with the inverted canvas colour to match dithered output
+  if (state.invert) {
+    const c = hexToRgb(state.canvasColor);
+    ctx.fillStyle = `rgb(${255 - c[0]}, ${255 - c[1]}, ${255 - c[2]})`;
+  } else {
+    ctx.fillStyle = state.canvasColor;
+  }
   ctx.fillRect(0, 0, fitW, fitH);
   ctx.drawImage(tmp, 0, 0, fitW, fitH);
 
