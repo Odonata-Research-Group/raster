@@ -1341,7 +1341,7 @@ const KERNELS = {
 
 // ── Dither engine — N-colour palette, RGB vector error propagation
 function dither(imageData, w, h) {
-  const { pattern, scale, threshold, contrast, invert } = state;
+  const { pattern, scale, threshold, contrast } = state;
   const src = imageData.data;
 
   const ow = Math.ceil(w / scale);
@@ -1349,8 +1349,8 @@ function dither(imageData, w, h) {
   const out = ctx.createImageData(ow, oh);
   const dst = out.data;
 
-  // Effective palette: reversed when invert is on
-  const pal    = invert ? [...state.palette].reverse() : [...state.palette];
+  // Palette — invert is handled upstream as a pixel pre-processing step
+  const pal    = [...state.palette];
   const palRgb = pal.map(hexToRgb);
   const N      = palRgb.length;
 
@@ -1566,6 +1566,18 @@ function render(sourceBitmap) {
       d[i]   = Math.max(0, Math.min(255, d[i]   + b));
       d[i+1] = Math.max(0, Math.min(255, d[i+1] + b));
       d[i+2] = Math.max(0, Math.min(255, d[i+2] + b));
+    }
+    offCtx.putImageData(id, 0, 0);
+  }
+
+  // ── Pre-processing: invert
+  if (state.invert) {
+    const id = offCtx.getImageData(0, 0, fitW, fitH);
+    const d  = id.data;
+    for (let i = 0; i < d.length; i += 4) {
+      d[i]   = 255 - d[i];
+      d[i+1] = 255 - d[i+1];
+      d[i+2] = 255 - d[i+2];
     }
     offCtx.putImageData(id, 0, 0);
   }
@@ -1826,8 +1838,8 @@ function downloadSVG() {
   const cw = canvas.width;
   const ch = canvas.height;
 
-  // Effective palette (respecting invert)
-  const pal    = state.invert ? [...state.palette].reverse() : [...state.palette];
+  // Palette — canvas pixels already have invert applied (pixel pre-processing in render())
+  const pal    = [...state.palette];
   const palRgb = pal.map(hexToRgb);
   const N      = palRgb.length;
   const bgHex  = pal[N - 1];  // last slot = background
