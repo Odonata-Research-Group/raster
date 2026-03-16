@@ -59,7 +59,7 @@ Named after Robert W. Floyd and Louis Steinberg, who published "An Adaptive Algo
 - Primary channel: Instagram (@floydsteinberg) → floydsteinberg.art
 - Funnel: post output image → link in bio → tool → download
 - Analytics: Plausible (privacy-respecting, no cookies, GDPR compliant) — shipped V2.5
-- Four download goals tracked: PNG, JPG, GIF, SVG
+- Eight goals tracked: Image Upload, Camera Used, Preset Used, Palette Colour Added, Download PNG, Download JPG, Download SVG, Download GIF
 - No paid distribution, no SEO investment — organic only
 
 ## Roadmap

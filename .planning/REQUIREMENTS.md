@@ -130,8 +130,8 @@
 
 ### Analytics
 - [x] Plausible installed — script tag in `<head>`, privacy-respecting, no cookies, GDPR compliant
-- [x] Custom events: PNG download, JPG download, GIF download, SVG download
-- [x] Four goals configured in Plausible dashboard
+- [x] Custom events: PNG download, JPG download, GIF download, SVG download, Image Upload, Camera Used, Preset Used, Palette Colour Added
+- [x] Eight goals configured in Plausible dashboard
 - [x] Goal: measure Instagram → floydsteinberg.art → download funnel
 
 ---
@@ -203,7 +203,7 @@
 - [x] Error diffusion (all 5 algorithms): RGB vector error propagation, nearest palette colour by Euclidean distance
 - [x] Ordered dither (Bayer, Noise, Halftone): luminance-mapped palette snap via `orderedSnap()`
 - [x] 2-colour output identical to V2.9 — no regression
-- [x] Invert reverses palette array — works correctly with N colours
+- [ ] Invert — broken in V2.10, fix in progress (reverting to pixel pre-processing approach)
 
 ### Palette UI
 - [x] Replaces fixed Ink / Paper rows in Colour section

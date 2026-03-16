@@ -51,7 +51,7 @@
 - [x] GIF encoder fixed — blob worker URL resolves CORS block on gif.worker.js
 - [x] SVG export — rect-per-pixel at dithered resolution, respects ink/paper colours, resolution warning, works in Figma/Illustrator
 - [x] Favicon — user-supplied image, circle-clipped at runtime, injected as PNG data URI
-- [x] Plausible analytics — page views + PNG / JPG / GIF / SVG download events, four goals configured
+- [x] Plausible analytics — page views + PNG / JPG / GIF / SVG / Image Upload / Camera Used / Preset Used / Palette Colour Added, eight goals configured
 
 ---
 
@@ -93,7 +93,7 @@
 - [x] Desktop hover reveal / mobile tap-to-select for remove affordance
 - [x] Hex readout below swatch row
 - [x] SVG export updated — one `<g>` per ink slot, last slot = background rect
-- [x] Invert reverses palette array — works correctly with N colours
+- [ ] Invert — broken in V2.10, fix in progress (reverting to pixel pre-processing approach)
 
 ---
 
