@@ -129,12 +129,12 @@
 - Circle clip removes JPEG background square — transparent corners, clean circle in browser tab
 - No external favicon file — entirely self-contained in index.html
 
-## Analytics — Plausible (V2.5, shipped)
+## Analytics — Plausible (V2.5, shipped; updated V2.10)
 - Plausible chosen over Umami (Umami cloud email verification failed) and Google Analytics (too heavy, cookie-based)
 - Plausible: open source, privacy-respecting, no cookies, GDPR compliant, no consent banner required
 - Script injected in `<head>` — page views and referrers tracked automatically
-- Custom events fire on all four download buttons: `Download PNG`, `Download JPG`, `Download GIF`, `Download SVG`
-- Four goals configured in Plausible dashboard to match event names exactly
+- Custom events: `Image Upload`, `Camera Used`, `Preset Used`, `Palette Colour Added`, `Download PNG`, `Download JPG`, `Download GIF`, `Download SVG`
+- Eight goals configured in Plausible dashboard to match event names exactly
 - Goal: measure Instagram → floydsteinberg.art → download funnel
 
 ## Canvas pinch-to-zoom (V2.6, shipped)
@@ -197,9 +197,11 @@
 - `orderedSnap(lum, threshNorm)` maps luminance to a position in the palette sorted by luminance, using the threshold value to decide between adjacent palette entries
 - With 2 colours, output is identical to V2.9
 
-### Invert with N colours
-- Invert reverses the palette array before passing to the dither engine — palette order flips, re-render fires
-- In SVG export, invert reversal is applied before determining background slot — consistent behaviour
+### Invert with N colours (bug — fix in progress)
+- Original V2.10 implementation reversed the palette array before passing to the dither engine
+- This does not work: error diffusion uses Euclidean distance which is order-agnostic; ordered dither sorts by luminance internally — reversing the input array has no effect in either case
+- Fix approach: restore invert as a pixel pre-processing step — when `state.invert` is true, apply `r = 255 - r, g = 255 - g, b = 255 - b` at the sampling stage before any dither math
+- This correctly inverts output for all 10 patterns at all palette sizes
 
 ### Palette UI
 - Replaces fixed Ink / Paper rows in the Colour section
