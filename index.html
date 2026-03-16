@@ -1357,19 +1357,23 @@ function dither(imageData, w, h) {
   const out = ctx.createImageData(ow, oh);
   const dst = out.data;
 
-  // Canvas colour is architecturally separate from the ink palette.
-  // Invert is mirrored on both so the distance check stays valid when active.
+  // Palette — ink colours + canvas colour as implicit background
+  // When invert is active, mirror palette entries so inverted pixels still
+  // snap to the correct palette slot (canvas stays canvas, ink stays ink)
   function maybeInvert(c) {
     return state.invert ? [255 - c[0], 255 - c[1], 255 - c[2]] : c;
   }
-  const inkPal       = state.palette.map(hexToRgb).map(maybeInvert);
-  const canvasRgb    = maybeInvert(hexToRgb(state.canvasColor));
-  const effectivePal = inkPal; // canvas colour NOT in palette — pre-pass handles it
-  const N            = effectivePal.length;
-  const tolerance    = state.threshold; // 0–100: RGB Euclidean distance to canvas colour
+  const inkPal     = state.palette.map(hexToRgb).map(maybeInvert);
+  const canvasRgb  = maybeInvert(hexToRgb(state.canvasColor));
+  const effectivePal = [...inkPal, canvasRgb];
+  const N          = effectivePal.length;
+  const CANVAS_IDX = inkPal.length; // canvas colour is always the last entry
 
-  // Pre-pass: is this source pixel close enough to canvas colour to be background?
-  // Distance-based — works regardless of relative luminance of canvas vs ink colours.
+  // tolerance: RGB Euclidean distance used by error-diffusion pre-pass only.
+  // Pixels within this distance of canvasRgb are classified as background
+  // before nearestIdx runs — prevents mid-tone inks stealing background pixels.
+  const tolerance = state.threshold; // 0–100 on slider
+
   function isBackground(r, g, b) {
     const dr = r - canvasRgb[0], dg = g - canvasRgb[1], db = b - canvasRgb[2];
     return Math.sqrt(dr * dr + dg * dg + db * db) < tolerance;
@@ -1405,12 +1409,12 @@ function dither(imageData, w, h) {
   // RGB vector propagation: works for any palette, 2-colour output is identical to V2.9
   if (['floyd', 'atkinson', 'jarvis', 'stucki', 'ostromoukhov'].includes(pattern)) {
 
-    const rBuf   = new Float32Array(ow * oh);
-    const gBuf   = new Float32Array(ow * oh);
-    const bBuf   = new Float32Array(ow * oh);
-    const bgMask = new Uint8Array(ow * oh); // 1 = background pixel, skip dither engine
+    const rBuf = new Float32Array(ow * oh);
+    const gBuf = new Float32Array(ow * oh);
+    const bBuf = new Float32Array(ow * oh);
+    const bgMask = new Uint8Array(ow * oh); // 1 = canvas background, skip nearestIdx
 
-    // Sample source — background check on raw values; contrast applied only to ink pixels
+    // Sample source — background check on raw pixel values before contrast is applied
     for (let py = 0; py < oh; py++) {
       for (let px = 0; px < ow; px++) {
         const sx = Math.min(Math.round(px * scale + scale / 2), w - 1);
@@ -1427,14 +1431,12 @@ function dither(imageData, w, h) {
     // Diffusion pass
     for (let py = 0; py < oh; py++) {
       for (let px = 0; px < ow; px++) {
-        const i = py * ow + px;
+        const i            = py * ow + px;
 
         if (bgMask[i]) {
-          // Background pixel — alpha=0, no error propagated
-          dst[i * 4]     = canvasRgb[0];
-          dst[i * 4 + 1] = canvasRgb[1];
-          dst[i * 4 + 2] = canvasRgb[2];
-          dst[i * 4 + 3] = 0;
+          // Confirmed background — alpha=0, no error propagated into neighbours
+          dst[i * 4] = canvasRgb[0]; dst[i * 4 + 1] = canvasRgb[1];
+          dst[i * 4 + 2] = canvasRgb[2]; dst[i * 4 + 3] = 0;
           continue;
         }
 
@@ -1443,7 +1445,7 @@ function dither(imageData, w, h) {
         const [nr, ng, nb] = effectivePal[idx];
         rBuf[i] = nr; gBuf[i] = ng; bBuf[i] = nb;
         dst[i * 4] = nr; dst[i * 4 + 1] = ng; dst[i * 4 + 2] = nb;
-        dst[i * 4 + 3] = 255;
+        dst[i * 4 + 3] = idx === CANVAS_IDX ? 0 : 255;
 
         const er = r - nr, eg = g - ng, eb = b - nb;
 
@@ -1506,13 +1508,6 @@ function dither(imageData, w, h) {
         const sx  = Math.max(0, Math.min(w - 1, Math.round(icx * scale)));
         const sy  = Math.max(0, Math.min(h - 1, Math.round(icy * scale)));
         const si  = (sy * w + sx) * 4;
-        const di  = (py * ow + px) * 4;
-
-        if (isBackground(src[si], src[si + 1], src[si + 2])) {
-          dst[di] = canvasRgb[0]; dst[di + 1] = canvasRgb[1]; dst[di + 2] = canvasRgb[2];
-          dst[di + 3] = 0;
-          continue;
-        }
 
         let lum = 0.299 * src[si] + 0.587 * src[si + 1] + 0.114 * src[si + 2];
         lum = Math.max(0, Math.min(255, (lum - 128) * contrast + 128));
@@ -1526,8 +1521,9 @@ function dither(imageData, w, h) {
 
         const idx = orderedSnapIdx(lum, dotPos);
         const col = effectivePal[idx];
+        const di  = (py * ow + px) * 4;
         dst[di] = col[0]; dst[di + 1] = col[1]; dst[di + 2] = col[2];
-        dst[di + 3] = 255;
+        dst[di + 3] = idx === CANVAS_IDX ? 0 : 255;
       }
     }
     return { imageData: out, ow, oh };
@@ -1546,13 +1542,6 @@ function dither(imageData, w, h) {
       const sx = Math.min(Math.max(0, Math.round(px * scale + scale / 2) + jx), w - 1);
       const sy = Math.min(Math.max(0, Math.round(py * scale + scale / 2) + jy), h - 1);
       const si = (sy * w + sx) * 4;
-      const di  = (py * ow + px) * 4;
-
-      if (isBackground(src[si], src[si + 1], src[si + 2])) {
-        dst[di] = canvasRgb[0]; dst[di + 1] = canvasRgb[1]; dst[di + 2] = canvasRgb[2];
-        dst[di + 3] = 0;
-        continue;
-      }
 
       let lum = 0.299 * src[si] + 0.587 * src[si + 1] + 0.114 * src[si + 2];
       lum = Math.max(0, Math.min(255, (lum - 128) * contrast + 128));
@@ -1563,8 +1552,9 @@ function dither(imageData, w, h) {
 
       const idx = orderedSnapIdx(lum, threshNorm);
       const col = effectivePal[idx];
+      const di  = (py * ow + px) * 4;
       dst[di] = col[0]; dst[di + 1] = col[1]; dst[di + 2] = col[2];
-      dst[di + 3] = 255;
+      dst[di + 3] = idx === CANVAS_IDX ? 0 : 255;
     }
   }
 
@@ -2236,9 +2226,6 @@ function updateCanvasColorUI() {
 }
 
 canvasColorInput.addEventListener('input', (e) => {
-  // Guard: handle only events from this specific element.
-  // Ink swatch inputs (dynamically created, no shared IDs, no delegated handlers)
-  // must never trigger this path — this check makes that structurally impossible.
   if (e.target !== canvasColorInput) return;
   state.canvasColor             = e.target.value;
   canvasSwatch.style.background = e.target.value;
