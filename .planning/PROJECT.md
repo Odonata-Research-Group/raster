@@ -6,7 +6,7 @@ Floyd Steinberg is a browser-based image dithering tool. Drop in a photo, apply 
 
 **Live:** https://floydsteinberg.art
 **Instagram:** @floydsteinberg
-**Status:** V2.10 shipped — bitmap dither, camera input, N-colour palette dithering, GIF/PNG/JPG/SVG export, brightness/blur/pixelate/scatter controls, full mobile support, pinch-to-zoom, presets, collapsible sidebar, analytics
+**Status:** V2.10e shipped — bitmap dither, camera input, N-colour palette dithering, GIF/PNG/JPG/SVG export, brightness/blur/pixelate/scatter controls, full mobile support, pinch-to-zoom, presets, collapsible sidebar, analytics, Paper label
 
 ## Why does it exist?
 
@@ -69,6 +69,7 @@ Named after Robert W. Floyd and Louis Steinberg, who published "An Adaptive Algo
 - V2.8: Collapsible sidebar sections
 - V2.9: Jarvis-Judice-Ninke, Stucki, Ostromoukhov error diffusion + true AM Halftone (rotated dot grid, Dot Size + Screen Angle controls)
 - V2.10: N-colour palette dithering engine — RGB vector error propagation, dynamic palette UI (2–5 colours), SVG multi-colour export
+- V2.10e: Paper label — background colour control renamed from "Canvas" to "Paper" for accuracy
 
 ### V2.11 (next)
 - LAB/HSL colour-accurate error calculation — upgrade the distance function and error propagation from RGB to perceptual colour space

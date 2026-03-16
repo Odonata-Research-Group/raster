@@ -232,3 +232,18 @@
 - Correct approach: WebCodecs API (VideoEncoder) + mp4-muxer library — outputs real H.264 MP4, no heavy dependencies
 - Decided against for V2: meaningful implementation effort, full session's work, not a quick add
 - Backlog as named V3 item: "MP4 export via WebCodecs + mp4-muxer"
+
+## Colour group label — Canvas → Paper rename (V2.10e, shipped)
+- The background colour control was previously labelled "Canvas" — renamed to "Paper"
+- Rationale: "Paper" is the correct mental model for the control — it's the surface the ink sits on, not a removal or transparency tool
+- "Canvas" implied a workspace concept or alpha channel behaviour, which led to incorrect expectations about what the colour would do
+- "Paper" is accurate to how dithering works: light pixels snap to paper, dark pixels snap to ink — the label now matches the algorithm
+- Single label change in HTML — no logic, no state, no behaviour changed
+
+## Canvas colour architecture fix — attempted and reverted (V2.10e)
+- Attempted: remove `canvasRgb` from `effectivePal`, replace with an RGB distance pre-pass (`isBackground`) driven by a remapped threshold slider (0–100, default 30)
+- Goal was to give users explicit control over which pixels are treated as background, independent of the dither snap
+- Broke all Bayer / halftone / noise patterns: the pre-pass collapsed `N` to `1` for ordered dithering (only one colour ever reached the dither step)
+- Also misclassified subject pixels as background when the paper colour wasn't white — pre-pass assumption did not hold for non-default palettes
+- Reverted fully to V2.10d production code — threshold slider unchanged at −128 to 128
+- Learning: the canvas/paper colour behaviour is a fundamental property of how dithering works, not a bug. Lightest pixels snap to paper, darkest snap to ink — this is correct and expected. The label rename was the right and complete response to the UX confusion.

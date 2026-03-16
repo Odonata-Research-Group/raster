@@ -93,6 +93,7 @@
 - [x] Desktop hover reveal / mobile tap-to-select for remove affordance
 - [x] Hex readout below swatch row
 - [x] SVG export updated — one `<g>` per ink slot, last slot = background rect
+- [x] Background colour control renamed from "Canvas" to "Paper" — correct mental model
 - [ ] Invert — broken in V2.10, fix in progress (reverting to pixel pre-processing approach)
 
 ---

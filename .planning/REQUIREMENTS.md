@@ -223,6 +223,14 @@
 
 ---
 
+## V2.10e (Shipped)
+
+### UI
+- [x] Background colour control in Colour group renamed from "Canvas" to "Paper"
+- [x] Label only — no logic, no state, no behaviour changed
+
+---
+
 ## V2.11 (Next)
 
 ### Engine
