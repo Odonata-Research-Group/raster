@@ -1624,6 +1624,7 @@ async function loadImageFile(file) {
   setHasImage(true);
   updateStatus();
   hideProcessing();
+  if (typeof plausible !== 'undefined') plausible('Image Upload');
 }
 
 // ── Camera
@@ -1645,6 +1646,7 @@ async function startCamera() {
     btnCamera.classList.add('active');
     btnCamera.textContent = '◉ Stop Camera';
     state.rafId = requestAnimationFrame(loop);
+    if (typeof plausible !== 'undefined') plausible('Camera Used');
   } catch (e) {
     alert('Camera access denied or not available.');
   }
@@ -1945,6 +1947,7 @@ function applyPreset(name, btn) {
 
   updateHalftoneControls();
   rerender();
+  if (typeof plausible !== 'undefined') plausible('Preset Used');
 }
 
 // ── Events: presets
@@ -2118,6 +2121,7 @@ function renderPaletteUI() {
       renderPaletteUI();
       clearActivePreset();
       rerender();
+      if (typeof plausible !== 'undefined') plausible('Palette Colour Added');
     });
     paletteRow.appendChild(addBtn);
   }
