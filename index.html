@@ -736,6 +736,160 @@
 
     .footer-link:hover .footer-link-arrow { opacity: 1; }
 
+    /* ── ANIMATE ── */
+    .stills-label {
+      font-size: 9px;
+      font-weight: 300;
+      color: var(--mid);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .frame-shelf {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 4px;
+      margin-bottom: 14px;
+    }
+
+    .frame-slot {
+      aspect-ratio: 1;
+      border: 1px dashed var(--border);
+      position: relative;
+      overflow: hidden;
+      cursor: default;
+    }
+
+    .frame-slot.filled {
+      border-style: solid;
+      border-color: var(--border);
+      cursor: pointer;
+    }
+
+    .frame-slot canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      image-rendering: pixelated;
+    }
+
+    .frame-remove {
+      position: absolute;
+      top: -1px;
+      right: -1px;
+      width: 11px;
+      height: 11px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--mid);
+      font-size: 8px;
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      line-height: 1;
+      font-family: var(--font);
+      z-index: 1;
+      transition: border-color 0.1s, color 0.1s;
+    }
+
+    .frame-remove:hover { border-color: var(--fg); color: var(--fg); }
+    .frame-slot.filled:hover .frame-remove { display: flex; }
+    .frame-slot.touch-selected .frame-remove { display: flex; }
+
+    /* ── Segmented control (speed + loop) ── */
+    .seg-control {
+      display: flex;
+      gap: 0;
+      margin-bottom: 10px;
+    }
+
+    .seg-btn {
+      flex: 1;
+      height: 28px;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--mid);
+      font-family: var(--font);
+      font-size: 9px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: border-color 0.1s, background 0.1s, color 0.1s;
+      margin-left: -1px;
+    }
+
+    .seg-btn:first-child { margin-left: 0; }
+
+    .seg-btn:hover { border-color: var(--mid); color: var(--fg); z-index: 1; }
+
+    .seg-btn.active {
+      background: var(--fg);
+      border-color: var(--fg);
+      color: var(--bg);
+      z-index: 2;
+    }
+
+    .seg-row-label {
+      font-size: 9px;
+      font-weight: 300;
+      color: var(--mid);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    /* Export GIF animated — same solid style as PNG/JPG/SVG/GIF */
+    .btn.anim-export-btn:disabled {
+      background: transparent;
+      border-color: var(--border);
+      color: var(--fg);
+      opacity: 1;
+    }
+
+    .btn.anim-export-btn:not(:disabled) {
+      background: #ffffff;
+      border-color: #ffffff;
+      color: #000000;
+      opacity: 1;
+    }
+
+    .btn.anim-export-btn:not(:disabled):hover {
+      background: rgba(255,255,255,0.8);
+      border-color: rgba(255,255,255,0.8);
+      color: #000000;
+    }
+
+    html.light .btn.anim-export-btn:disabled {
+      background: transparent;
+      border-color: var(--border);
+      color: var(--fg);
+    }
+
+    html.light .btn.anim-export-btn:not(:disabled) {
+      background: #000000;
+      border-color: #000000;
+      color: #ffffff;
+    }
+
+    html.light .btn.anim-export-btn:not(:disabled):hover {
+      background: rgba(0,0,0,0.8);
+      border-color: rgba(0,0,0,0.8);
+      color: #ffffff;
+    }
+
+    /* Mobile: bigger frame slots */
+    @media (max-width: 480px) {
+      .frame-shelf { gap: 5px; }
+      .stills-label { font-size: 12px; font-weight: 400; }
+      .seg-btn { height: 36px; font-size: 11px; }
+      .seg-row-label { font-size: 12px; font-weight: 400; }
+      .frame-slot.filled:hover .frame-remove { display: none; }
+      .frame-slot.touch-selected .frame-remove { display: flex; }
+    }
+
     /* ── PARAM DISABLED ── */
     .param.param-disabled {
       opacity: 0.35;
@@ -1126,6 +1280,35 @@
         </div>
       </div>
 
+      <!-- ANIMATE -->
+      <div class="group">
+        <div class="group-label" data-label="Animate">Animate<span class="group-toggle">−</span></div>
+        <div class="group-body">
+
+          <div class="stills-label">Stills</div>
+          <div class="frame-shelf" id="frameShelf"></div>
+
+          <div class="seg-row-label">Speed</div>
+          <div class="seg-control" id="speedControl">
+            <button class="seg-btn" data-fps="4">Slow</button>
+            <button class="seg-btn active" data-fps="8">Med</button>
+            <button class="seg-btn" data-fps="12">Fast</button>
+          </div>
+
+          <div class="seg-row-label">Loop</div>
+          <div class="seg-control" id="loopControl">
+            <button class="seg-btn active" data-loop="loop">Loop</button>
+            <button class="seg-btn" data-loop="pingpong">Ping-Pong</button>
+          </div>
+
+          <button class="btn" id="btnAddStill" disabled>+ Add Still</button>
+          <button class="btn" id="btnPreview" disabled>▶ Preview</button>
+          <button class="btn danger" id="btnClearFrames" disabled>✕ Clear</button>
+          <button class="btn anim-export-btn" id="btnExportAnimGIF" disabled>↓ Export GIF</button>
+
+        </div>
+      </div>
+
       <!-- FOOTER LINKS -->
       <div class="sidebar-footer">
         <button class="footer-link" id="btnAbout">
@@ -1358,13 +1541,9 @@ function dither(imageData, w, h) {
   const dst = out.data;
 
   // Palette — ink colours + canvas colour as implicit background
-  // When invert is active, mirror palette entries so inverted pixels still
-  // snap to the correct palette slot (canvas stays canvas, ink stays ink)
-  function maybeInvert(c) {
-    return state.invert ? [255 - c[0], 255 - c[1], 255 - c[2]] : c;
-  }
-  const inkPal     = state.palette.map(hexToRgb).map(maybeInvert);
-  const canvasRgb  = maybeInvert(hexToRgb(state.canvasColor));
+  // Invert is applied as a pre-processing step in render() — palette is unchanged
+  const inkPal       = state.palette.map(hexToRgb);
+  const canvasRgb    = hexToRgb(state.canvasColor);
   const effectivePal = [...inkPal, canvasRgb];
   const N          = effectivePal.length;
   const CANVAS_IDX = inkPal.length; // canvas colour is always the last entry
@@ -1623,13 +1802,7 @@ function render(sourceBitmap) {
 
   // Fill canvas with canvas colour, then composite dithered result on top
   // (pixels that snapped to canvas colour are transparent, so they fall through)
-  // When invert is active, fill with the inverted canvas colour to match dithered output
-  if (state.invert) {
-    const c = hexToRgb(state.canvasColor);
-    ctx.fillStyle = `rgb(${255 - c[0]}, ${255 - c[1]}, ${255 - c[2]})`;
-  } else {
-    ctx.fillStyle = state.canvasColor;
-  }
+  ctx.fillStyle = state.canvasColor;
   ctx.fillRect(0, 0, fitW, fitH);
   ctx.drawImage(tmp, 0, 0, fitW, fitH);
 
@@ -1730,6 +1903,7 @@ function setHasImage(has) {
   btnJPG.disabled   = !has;
   btnSVG.disabled   = !has;
   btnGIF.disabled   = !has;
+  btnAddStill.disabled = !has;
   zoomIndicator.classList.toggle('visible', has);
 }
 
@@ -2399,6 +2573,261 @@ canvasWrap.addEventListener('pointerdown', (e) => {
   }
   lastTap = now;
 });
+
+// ── ANIMATE — frame sequencer
+// State additions
+state.frames        = [];   // array of { imageData, w, h }
+state.animFps       = 8;
+state.animPingPong  = false;
+state.animPlaying   = false;
+state.animIntervalId = null;
+state.animFrameIdx  = 0;
+
+const frameShelf      = document.getElementById('frameShelf');
+const btnAddStill     = document.getElementById('btnAddStill');
+const btnPreview      = document.getElementById('btnPreview');
+const btnClearFrames  = document.getElementById('btnClearFrames');
+const btnExportAnimGIF = document.getElementById('btnExportAnimGIF');
+
+// Render the 15-slot shelf
+function renderFrameShelf() {
+  frameShelf.innerHTML = '';
+  const MAX = 15;
+
+  state.frames.forEach((frame, idx) => {
+    const slot = document.createElement('div');
+    slot.className = 'frame-slot filled';
+
+    // Thumbnail canvas
+    const thumb = document.createElement('canvas');
+    thumb.width  = frame.w;
+    thumb.height = frame.h;
+    thumb.getContext('2d').putImageData(frame.imageData, 0, 0);
+    slot.appendChild(thumb);
+
+    // Remove badge
+    const rmBtn = document.createElement('button');
+    rmBtn.className   = 'frame-remove';
+    rmBtn.textContent = '×';
+    rmBtn.title       = 'Remove';
+    rmBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      removeFrame(idx);
+    });
+    slot.appendChild(rmBtn);
+
+    // Mobile touch-select
+    slot.addEventListener('pointerdown', (e) => {
+      if (!window.matchMedia('(pointer: coarse)').matches) return;
+      e.preventDefault();
+      const wasSelected = slot.classList.contains('touch-selected');
+      document.querySelectorAll('.frame-slot').forEach(s => s.classList.remove('touch-selected'));
+      if (!wasSelected) slot.classList.add('touch-selected');
+    });
+
+    frameShelf.appendChild(slot);
+  });
+
+  // Empty slots to fill to MAX
+  const empties = MAX - state.frames.length;
+  for (let i = 0; i < empties; i++) {
+    const slot = document.createElement('div');
+    slot.className = 'frame-slot';
+    frameShelf.appendChild(slot);
+  }
+
+  updateAnimControls();
+}
+
+function updateAnimControls() {
+  const count = state.frames.length;
+  const hasEnough = count >= 2;
+  btnPreview.disabled       = !hasEnough;
+  btnClearFrames.disabled   = count === 0;
+  btnExportAnimGIF.disabled = !hasEnough;
+
+  // Reset preview button label if not enough frames
+  if (!hasEnough && state.animPlaying) stopPreview();
+}
+
+function captureStill() {
+  if (state.mode === 'idle' || canvas.width === 0) return;
+  if (state.frames.length >= 15) return;
+
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  state.frames.push({ imageData, w: canvas.width, h: canvas.height });
+  renderFrameShelf();
+  if (typeof plausible !== 'undefined') plausible('Still Captured');
+}
+
+function removeFrame(idx) {
+  state.frames.splice(idx, 1);
+  document.querySelectorAll('.frame-slot').forEach(s => s.classList.remove('touch-selected'));
+  if (state.animPlaying) stopPreview();
+  renderFrameShelf();
+}
+
+function clearFrames() {
+  state.frames = [];
+  if (state.animPlaying) stopPreview();
+  renderFrameShelf();
+}
+
+// Build playback sequence respecting ping-pong
+function buildPlaybackSequence() {
+  const frames = state.frames;
+  if (!state.animPingPong || frames.length < 3) return frames;
+  // 1→N→N-1→2 (exclude endpoints to avoid double-frame stutter)
+  const fwd = frames.slice(0, frames.length);
+  const rev = frames.slice(1, frames.length - 1).reverse();
+  return [...fwd, ...rev];
+}
+
+function startPreview() {
+  if (state.frames.length < 2) return;
+  state.animPlaying  = true;
+  state.animFrameIdx = 0;
+  btnPreview.textContent = '■ Stop';
+
+  const seq     = buildPlaybackSequence();
+  const delay   = Math.round(1000 / state.animFps);
+
+  state.animIntervalId = setInterval(() => {
+    const frame = seq[state.animFrameIdx % seq.length];
+    // Resize canvas if frame dimensions differ
+    if (canvas.width !== frame.w || canvas.height !== frame.h) {
+      canvas.width  = frame.w;
+      canvas.height = frame.h;
+    }
+    ctx.putImageData(frame.imageData, 0, 0);
+    state.animFrameIdx++;
+  }, delay);
+}
+
+function stopPreview() {
+  if (state.animIntervalId) {
+    clearInterval(state.animIntervalId);
+    state.animIntervalId = null;
+  }
+  state.animPlaying  = false;
+  state.animFrameIdx = 0;
+  btnPreview.textContent = '▶ Preview';
+  // Restore current render
+  if (state.mode === 'image' && state.source) render(state.source);
+}
+
+function togglePreview() {
+  if (state.animPlaying) stopPreview();
+  else startPreview();
+}
+
+// Export animated GIF via existing gif.js pipeline
+async function exportAnimatedGIF() {
+  if (state.frames.length < 2) return;
+
+  btnExportAnimGIF.textContent = '… Encoding';
+  btnExportAnimGIF.disabled    = true;
+
+  const seq      = buildPlaybackSequence();
+  const delay    = Math.round(1000 / state.animFps);
+  const workerUrl = await getGifWorkerUrl();
+
+  const gifW = seq[0].w;
+  const gifH = seq[0].h;
+
+  const gif = new GIF({
+    workers: 2,
+    quality: 10,
+    width:   gifW,
+    height:  gifH,
+    workerScript: workerUrl,
+  });
+
+  // Pass 2D context (not canvas element) — gif.js reads pixels directly via
+  // getContextData, avoiding the internal double-canvas path that fails silently
+  seq.forEach(frame => {
+    const tmp  = document.createElement('canvas');
+    tmp.width  = gifW;
+    tmp.height = gifH;
+    const tCtx = tmp.getContext('2d');
+    if (frame.w !== gifW || frame.h !== gifH) {
+      const src = document.createElement('canvas');
+      src.width  = frame.w;
+      src.height = frame.h;
+      src.getContext('2d').putImageData(frame.imageData, 0, 0);
+      tCtx.drawImage(src, 0, 0, gifW, gifH);
+    } else {
+      tCtx.putImageData(frame.imageData, 0, 0);
+    }
+    gif.addFrame(tCtx, { delay, copy: true });
+  });
+
+  gif.on('finished', (blob) => {
+    const url = URL.createObjectURL(blob);
+    const a   = document.createElement('a');
+    a.download = `floydsteinberg-anim-${Date.now()}.gif`;
+    a.href     = url;
+    a.click();
+    URL.revokeObjectURL(url);
+    if (typeof plausible !== 'undefined') plausible('Download GIF Animated');
+    btnExportAnimGIF.textContent = '↓ Export GIF';
+    btnExportAnimGIF.disabled    = false;
+  });
+
+  gif.render();
+}
+
+// Stop preview when image is cleared or new image loaded
+const _origClearAll = clearAll;
+clearAll = function() {
+  stopPreview();
+  _origClearAll();
+};
+
+// Events: animate
+btnAddStill.addEventListener('click', captureStill);
+btnPreview.addEventListener('click', togglePreview);
+btnClearFrames.addEventListener('click', clearFrames);
+btnExportAnimGIF.addEventListener('click', exportAnimatedGIF);
+
+// Stop preview on new image load (patch loadImageFile post-hoc)
+const _origLoadImageFile = loadImageFile;
+loadImageFile = async function(file) {
+  stopPreview();
+  return _origLoadImageFile(file);
+};
+
+// Speed segmented control
+document.getElementById('speedControl').addEventListener('click', (e) => {
+  const btn = e.target.closest('.seg-btn');
+  if (!btn) return;
+  state.animFps = +btn.dataset.fps;
+  document.querySelectorAll('#speedControl .seg-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  // Restart preview at new FPS if playing
+  if (state.animPlaying) { stopPreview(); startPreview(); }
+});
+
+// Loop segmented control
+document.getElementById('loopControl').addEventListener('click', (e) => {
+  const btn = e.target.closest('.seg-btn');
+  if (!btn) return;
+  state.animPingPong = btn.dataset.loop === 'pingpong';
+  document.querySelectorAll('#loopControl .seg-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  // Restart preview with new loop mode if playing
+  if (state.animPlaying) { stopPreview(); startPreview(); }
+});
+
+// Dismiss touch-selected frame slots when tapping outside
+document.addEventListener('pointerdown', (e) => {
+  if (!e.target.closest('.frame-slot')) {
+    document.querySelectorAll('.frame-slot').forEach(s => s.classList.remove('touch-selected'));
+  }
+});
+
+// Init shelf
+renderFrameShelf();
 
 // ── Collapsible sections
 document.querySelectorAll('.group > .group-label').forEach(label => {
