@@ -133,8 +133,8 @@
 - Plausible chosen over Umami (Umami cloud email verification failed) and Google Analytics (too heavy, cookie-based)
 - Plausible: open source, privacy-respecting, no cookies, GDPR compliant, no consent banner required
 - Script injected in `<head>` — page views and referrers tracked automatically
-- Custom events: `Image Upload`, `Camera Used`, `Preset Used`, `Palette Colour Added`, `Download PNG`, `Download JPG`, `Download GIF`, `Download SVG`
-- Eight goals configured in Plausible dashboard to match event names exactly
+- Custom events: `Image Upload`, `Camera Used`, `Preset Used`, `Palette Colour Added`, `Download PNG`, `Download JPG`, `Download GIF`, `Download SVG`, `Still Captured`, `Download GIF Animated`
+- Goals configured in Plausible dashboard to match event names exactly
 - Goal: measure Instagram → floydsteinberg.art → download funnel
 
 ## Canvas pinch-to-zoom (V2.6, shipped)
@@ -197,11 +197,11 @@
 - `orderedSnap(lum, threshNorm)` maps luminance to a position in the palette sorted by luminance, using the threshold value to decide between adjacent palette entries
 - With 2 colours, output is identical to V2.9
 
-### Invert with N colours (bug — fix in progress)
-- Original V2.10 implementation reversed the palette array before passing to the dither engine
-- This does not work: error diffusion uses Euclidean distance which is order-agnostic; ordered dither sorts by luminance internally — reversing the input array has no effect in either case
-- Fix approach: restore invert as a pixel pre-processing step — when `state.invert` is true, apply `r = 255 - r, g = 255 - g, b = 255 - b` at the sampling stage before any dither math
-- This correctly inverts output for all 10 patterns at all palette sizes
+### Invert fix (V2.11, shipped)
+- V2.10 implementation had redundant invert logic in two places: `maybeInvert()` in `dither()` was inverting the palette, and the canvas fill in `render()` was also inverting the background colour
+- Pre-processing invert in `render()` was already correct — pixel inversion applied before dither math
+- Fix: removed `maybeInvert` from `dither()` entirely; removed conditional canvas fill inversion from `render()`; pre-processing step is now the sole invert path
+- Palette and canvas fill are now unconditional — cleaner, correct for all palette sizes
 
 ### Palette UI
 - Replaces fixed Ink / Paper rows in the Colour section
@@ -219,6 +219,37 @@
 - Last slot = background rect — fills the full SVG canvas
 - Nearest-palette-index lookup mirrors the dither engine — SVG faithfully represents what the canvas shows
 - Background rule: last slot is always background regardless of its colour value — user controls this by palette order; Invert toggle effectively swaps which end is background
+
+## Animate — manual frame sequencer (V2.11, shipped)
+- Mental model: render something you like, capture it as a still, adjust parameters, capture again, repeat — then export as a looping GIF
+- Frames stored as raw `ImageData` objects (`state.frames` array) — what you see is what gets encoded, regardless of subsequent parameter changes
+- Maximum 15 frames — 3×5 shelf grid
+- Minimum 2 frames to unlock Preview and Export GIF
+
+### Frame shelf UI
+- 3×5 grid of slots — empty slots: dashed border, no fill; filled slots: live thumbnail canvas preview
+- Thumbnail rendered from stored `ImageData` into a small canvas element — actual pixel preview, not a colour block
+- Remove affordance: 11×11px `×` badge top-right, revealed on hover (desktop) or tap-select (mobile) — mirrors palette swatch pattern exactly
+- Mobile touch-select: tap filled slot to reveal `×`, tap outside to dismiss
+
+### Controls
+- Speed: segmented control — Slow (4fps) / Med (8fps, default) / Fast (12fps)
+- Loop: segmented control — Loop / Ping-Pong
+- Ping-pong builds reversed sequence excluding first and last frames to avoid double-frame stutter at endpoints
+- Add Still: captures current canvas state, appends to shelf
+- Preview: plays frame sequence on canvas via `setInterval` at selected FPS — no encoding; loops until Stop
+- Stop: clears interval, restores current render
+- Clear: removes all frames, resets shelf
+- Export GIF: encodes and downloads via existing gif.js pipeline
+
+### GIF encoding fix
+- Initial implementation passed canvas element to `gif.addFrame()` — gif.js internally calls `getImageData` on it, creating a double-canvas indirection that fails silently
+- Fix: pass 2D context (`tCtx`) instead — gif.js calls `getContextData` and reads pixels directly, one hop
+- Frames with differing dimensions (captured at different window sizes) are scaled to match the first frame's dimensions before encoding
+
+### Plausible events
+- `Still Captured` — fires on each Add Still
+- `Download GIF Animated` — fires on successful animated export; distinct from existing `Download GIF` (single-frame/camera) for funnel analysis
 
 ## Gallery / settings share (backlog, to be specced)
 - Idea: export an image with current settings baked into it — shareable output that communicates how a result was made

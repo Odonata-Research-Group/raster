@@ -203,7 +203,6 @@
 - [x] Error diffusion (all 5 algorithms): RGB vector error propagation, nearest palette colour by Euclidean distance
 - [x] Ordered dither (Bayer, Noise, Halftone): luminance-mapped palette snap via `orderedSnap()`
 - [x] 2-colour output identical to V2.9 — no regression
-- [ ] Invert — broken in V2.10, fix in progress (reverting to pixel pre-processing approach)
 
 ### Palette UI
 - [x] Replaces fixed Ink / Paper rows in Colour section
@@ -231,11 +230,26 @@
 
 ---
 
-## V2.11 (Next)
+## V2.11 (Shipped)
 
-### Engine
-- [ ] LAB/HSL colour-accurate error calculation — replace RGB Euclidean distance with perceptual colour space distance function
-- [ ] Engine-only change — no UI additions, no regression on existing behaviour
+### Bug fixes
+- [x] Invert fix — removed redundant `maybeInvert()` from `dither()` and conditional canvas fill inversion from `render()`; pixel pre-processing in `render()` is now the sole invert path; correct for all 10 patterns at all palette sizes
+
+### Animate — manual frame sequencer
+- [x] ANIMATE section in sidebar — collapsible, below EXPORT, follows existing group pattern
+- [x] Frame shelf — 3×5 grid, 15 slots maximum; empty slots dashed border; filled slots show thumbnail canvas preview
+- [x] Thumbnail is actual pixel preview rendered from stored `ImageData` — not a colour block
+- [x] Add Still — captures current canvas `ImageData`, appends to shelf; disabled when no image loaded
+- [x] Remove frame — 11×11px `×` badge top-right of filled slot; hover to reveal (desktop); tap-select to reveal (mobile)
+- [x] Clear — removes all frames, resets shelf
+- [x] Speed: segmented control — Slow (4fps) / Med (8fps, default) / Fast (12fps)
+- [x] Loop: segmented control — Loop / Ping-Pong
+- [x] Ping-pong excludes first and last frames from the reversed segment — no double-frame stutter at endpoints
+- [x] Preview — plays frame sequence on canvas via `setInterval` at selected FPS; no encoding; button toggles to ■ Stop
+- [x] Stop — clears interval, restores current render
+- [x] Export GIF — encodes via existing gif.js pipeline; passes 2D context to `gif.addFrame()` (not canvas element) to avoid silent worker failure; frames with differing dimensions scaled to match first frame
+- [x] Export GIF disabled below 2 frames
+- [x] Plausible events: `Still Captured` on capture, `Download GIF Animated` on export
 
 ---
 
@@ -248,9 +262,6 @@
 ### Colour
 - [ ] Colour output mode selector (Mono / Tonal / Palette / RGB / Original)
 - [ ] Palette extraction from image
-
-### Effects
-- [ ] Temporal / animated dithering
 
 ### UI
 - [ ] Side-by-side before/after view

@@ -94,28 +94,43 @@
 - [x] Hex readout below swatch row
 - [x] SVG export updated — one `<g>` per ink slot, last slot = background rect
 - [x] Background colour control renamed from "Canvas" to "Paper" — correct mental model
-- [ ] Invert — broken in V2.10, fix in progress (reverting to pixel pre-processing approach)
+- [x] Invert fix — redundant palette inversion removed; pixel pre-processing in `render()` is now the sole invert path; correct for all 10 patterns at all palette sizes
 
 ---
 
-## Milestone 10 — Perceptual colour (next)
+## Milestone 10 — Animate ✓
+- [x] ANIMATE section in sidebar — collapsible, below EXPORT
+- [x] Frame shelf — 3×5 grid, 15 slots maximum; empty slots dashed; filled slots show thumbnail pixel preview
+- [x] Add Still — captures current canvas `ImageData`, appends to shelf; disabled when no image loaded
+- [x] Remove frame — `×` badge top-right; hover to reveal (desktop), tap-select (mobile)
+- [x] Clear — removes all frames, resets shelf
+- [x] Speed: segmented control — Slow (4fps) / Med (8fps) / Fast (12fps)
+- [x] Loop: segmented control — Loop / Ping-Pong (ping-pong excludes endpoints to avoid double-frame stutter)
+- [x] Preview — plays sequence on canvas via `setInterval`; no encoding; button toggles ▶ / ■
+- [x] Stop restores current render
+- [x] Export GIF — encodes via gif.js; passes 2D context to `gif.addFrame()` to avoid silent worker failure; mismatched frame dimensions scaled to first frame
+- [x] Export GIF disabled below 2 frames
+- [x] Plausible events: `Still Captured`, `Download GIF Animated`
+
+---
+
+## Milestone 11 — Perceptual colour (next)
 - [ ] LAB/HSL colour-accurate error calculation — replace RGB Euclidean distance with perceptual colour space distance function
 - [ ] Engine-only change — no UI additions
 
 ---
 
-## Milestone 11 — Share + expand
+## Milestone 12 — Share + expand
 - [ ] Gallery / settings share — export image with settings baked in, or URL-encoded state for sharing exact recipes
 - [ ] MP4 export — WebCodecs API + mp4-muxer, H.264 output, Instagram compatible
 - [ ] Colour output mode selector (Mono / Tonal / Palette / RGB / Original)
 - [ ] Palette extraction from image
-- [ ] Temporal / animated dithering
 - [ ] Side-by-side before/after view
 - [ ] Landing page
 
 ---
 
-## Milestone 12 — Platform
+## Milestone 13 — Platform
 - [ ] Blue noise dithering
 - [ ] Line screen / horizontal scan pattern
 - [ ] Second effect (ASCII or halftone as standalone)
